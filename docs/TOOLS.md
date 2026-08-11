@@ -38,8 +38,18 @@ spendable on ads only. `GET v1/account/{accountID}/balance`.
 **Sandbox only** — creates a test advertiser account. This server refuses the call unless
 `AVITO_ADS_ENVIRONMENT=sandbox`, and the refusal costs no API point; the endpoint posts to the
 *configured* account's path, so it is not something to try against production. The running server
-keeps using `AVITO_ADS_ACCOUNT_ID`: the new id is not adopted. Calling it twice creates two
-accounts.
+keeps using `AVITO_ADS_ACCOUNT_ID`: the new id is not adopted.
+
+**You get one shot.** A second call answers `403 нельзя создать второй аккаунт в песочнице` — the
+sandbox allows exactly one account per key. The test campaigns, groups and creatives that make the
+sandbox useful are generated *at creation time*, and only if the account already has a valid
+contract; otherwise the account is still created, but with the warning `не удалось создать тестовые
+кампании, группы и креативы: актуальный договор аккаунта не найден`, and registering a contract
+afterwards does not backfill them.
+
+Field formats are validated server-side and rejections are strict: `inn` and `ogrn` are
+checksum-verified, addresses must look like `127015, г. Москва, ул. Лесная, д. 7`, and the phone
+inside `contact` like `+71234567890`.
 
 | Input | Type | Required | Notes |
 |---|---|---|---|
@@ -49,7 +59,7 @@ accounts.
 | `ogrn` | string | yes | OGRN (company) / OGRNIP (sole trader). |
 | `legalAddress` | string | yes | Registered address. |
 | `actualAddress` | string | yes | Postal address; may repeat `legalAddress`. |
-| `contact` | object | yes | Non-empty; the usual keys are `name` / `email` / `phone`, passed through as-is. |
+| `contact` | object | yes | Non-empty; keys are `name` / `email` / `phone`, passed through as-is. The API validates the phone inside it. |
 | `kpp` | string | no | Companies (`ul`) only. |
 | `legalType` | `ul` \| `ip` | no | Company or sole proprietor. |
 

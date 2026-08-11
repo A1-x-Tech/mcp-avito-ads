@@ -97,6 +97,27 @@ test("fail adds nothing when the API sent neither number", () => {
   assert.equal(text, "Error: HTTP 400: bad request");
 });
 
+test("a bare 403 blames the account id, not the permissions", () => {
+  // Verified against the live API: a token minted for another account answers
+  // 403 with an empty body, which reads like "you lack rights" and is not.
+  const text = (fail(new AvitoAdsError(403, "Forbidden")).content[0] as { text: string }).text;
+  assert.match(text, /AVITO_ADS_ACCOUNT_ID/);
+});
+
+test("a bare 401 blames the credentials", () => {
+  const text = (fail(new AvitoAdsError(401, undefined)).content[0] as { text: string }).text;
+  assert.match(text, /AVITO_ADS_CLIENT_ID and AVITO_ADS_CLIENT_SECRET/);
+});
+
+test("a 403 that explains itself is left alone", () => {
+  // The sandbox-only endpoints answer with their own message; guessing over it
+  // would point the reader at the wrong variable.
+  const err = new AvitoAdsError(403, { code: "403", message: "Ручка доступна только для песочницы" });
+  const text = (fail(err).content[0] as { text: string }).text;
+  assert.doesNotMatch(text, /AVITO_ADS_ACCOUNT_ID/);
+  assert.match(text, /песочницы/);
+});
+
 test("every annotation sets all four hints", () => {
   assert.deepEqual(READ_ONLY, {
     readOnlyHint: true,

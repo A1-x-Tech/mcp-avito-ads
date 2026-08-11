@@ -197,11 +197,21 @@ The agency child accounts created by `create_child_account` come with their own 
 ### Sandbox
 
 Set `AVITO_ADS_ENVIRONMENT=sandbox` and the server talks to `https://api.avito.ru/ads-sandbox/`
-instead of `https://api.avito.ru/ads/` — the path prefix is the only difference. Use it to
-rehearse the write tools (transfers, budget and bid changes, user management) without touching
-real money. `create_sandbox_account` mints a test advertiser account there — the server refuses
-that tool unless `AVITO_ADS_ENVIRONMENT=sandbox` — and the returned id is **not** adopted by the
-running server: put it into `AVITO_ADS_ACCOUNT_ID` to use it.
+instead of `https://api.avito.ru/ads/`. Use it to rehearse the write tools without touching real
+money. `create_sandbox_account` mints a test account there — the server refuses that tool unless
+`AVITO_ADS_ENVIRONMENT=sandbox` — and the returned id is **not** adopted by the running server:
+put it into `AVITO_ADS_ACCOUNT_ID` to use it.
+
+Three things worth knowing before you spend the attempt, none of them documented upstream:
+
+- **One account per key.** A second `create_sandbox_account` answers `403 нельзя создать второй
+  аккаунт в песочнице`.
+- **Test data is generated once, at creation, and only if the account already has a valid
+  contract.** Without one the account is created with a warning and stays empty — no campaigns, no
+  groups, no statistics to read — and registering a contract afterwards does not backfill it.
+- **The sandbox is not a full mirror**: `get_balance` answers `404` there.
+
+Quotas are per environment: production and the sandbox each carry their own weekly point balance.
 
 ## Configuration
 

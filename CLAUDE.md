@@ -94,5 +94,30 @@ npm run smoke      # live READ-ONLY calls (needs the three required env vars; sp
   `campaign_stats` is the way to cover a whole campaign.
 - `list*` tools reject out-of-range `limit`/`page` in zod, so `normalizeListRequest`'s clamp is
   unreachable from MCP. Rejecting matches the official SDK and costs no point; keep it.
-- The `contact` key vocabulary of `create_sandbox_account` (`name` / `email` / `phone`) is a
-  guess — the SDK only requires a non-empty object.
+- Statistics tools are the only ones never exercised against the live API: neither the production
+  account nor the sandbox had a single campaign to report on (see below).
+
+## What the live API taught us (2026-08-11)
+
+Verified against a real cabinet; none of this is in the SDK or the public docs.
+
+- **A bare `403` means the account id, not the rights.** The token is minted for exactly one
+  account, so a mismatched `AVITO_ADS_ACCOUNT_ID` fails with `403 Forbidden` and an empty body —
+  indistinguishable from a permissions problem until you know. `401` is the credentials.
+  `fail()` and the smoke check say so explicitly; keep that hint, it costs four blind probes to
+  rediscover. A `403` that carries its own message is specific and must not be overwritten.
+- **Path shape is confirmed.** A route that does not exist answers `404 no Route matched with
+  those values`; a foreign account answers `403`. So a 403 also proves the path is right.
+- **The sandbox is not a mirror.** `balance` answers `404` there. `create_sandbox_account` outside
+  the sandbox answers `403 Ручка доступна только для песочницы`.
+- **You get exactly one sandbox account per key** (`403 нельзя создать второй аккаунт в
+  песочнице`). Its test campaigns, groups and creatives are generated *at creation time* and only
+  if the account already has a valid contract — otherwise it is created with the warning
+  `не удалось создать тестовые кампании, группы и креативы: актуальный договор аккаунта не найден`,
+  and registering a contract afterwards does not backfill them. There is no second attempt.
+- **Legal-entity validation is strict**: INN and OGRN are checksum-verified, addresses must look
+  like `127015, г. Москва, ул. Лесная, д. 7`, phones like `+71234567890`.
+- **`contact` really is `{name, email, phone}`** — the guess was right, the API validated the
+  phone inside it.
+- Quotas are per environment: production and the sandbox carry separate point balances
+  (15000 and 10000 on the account we tested), and every call costs one point.

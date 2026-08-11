@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.1] — 2026-08-11
+
+First release verified against a live Avito Ads cabinet. Thirteen of the twenty-five tools were
+exercised end to end; the wire protocol, derived from the official SDK, needed no corrections.
+
+### Changed
+
+- A bare `403` now explains itself. The token is minted for exactly one account, so a mismatched
+  `AVITO_ADS_ACCOUNT_ID` fails with `403 Forbidden` and an empty body — which reads like a
+  permissions problem and is not. Tool errors and the smoke check now name the variable to check;
+  a `401` points at the credentials instead. A `403` that carries its own message (the
+  sandbox-only endpoints do) is left untouched, so the hint never talks over the API.
+
+### Documentation
+
+- Recorded what the live API does that no upstream document mentions: the sandbox allows exactly
+  one account per key, its test campaigns are generated only at creation time and only when a
+  valid contract already exists, `get_balance` answers `404` there, INN/OGRN are checksum-verified,
+  and addresses and phones must match the Russian formats. Corrected the claim that
+  `create_sandbox_account` can be called twice — it cannot.
+
 ## [1.0.0] — 2026-08-11
 
 ### Changed
@@ -59,6 +80,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Documentation: `README.md`, `docs/TOOLS.md`, `docs/DEVELOPMENT.md`, `docs/PUBLISHING.md`,
   `CLAUDE.md`.
 
-[Unreleased]: https://github.com/A1-x-Tech/mcp-avito-ads/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/A1-x-Tech/mcp-avito-ads/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/A1-x-Tech/mcp-avito-ads/releases/tag/v1.0.1
 [1.0.0]: https://github.com/A1-x-Tech/mcp-avito-ads/releases/tag/v1.0.0
 [0.1.0]: https://github.com/A1-x-Tech/mcp-avito-ads/releases/tag/v0.1.0

@@ -82,10 +82,36 @@ export function fail(err: unknown): CallToolResult {
   // secrets live in cause, and it makes failures far easier to diagnose.
   if (err instanceof Error && err.cause instanceof Error) message += ` (${err.cause.message})`;
   if (err instanceof AvitoAdsError) {
+    const hint = authHint(err);
+    if (hint) message += ` — ${hint}`;
     if (err.retryAfter !== undefined) message += ` — retry after ${err.retryAfter}s`;
     if (err.apiPointBalance !== null) message += ` (apiPointBalance: ${err.apiPointBalance})`;
   }
   return { content: [{ type: "text", text: `Error: ${message}` }], isError: true };
+}
+
+/**
+ * What a bare 401 or 403 from this API actually means.
+ *
+ * Avito answers a wrong account with `403 Forbidden` and an empty body, which
+ * reads like a permissions problem and is not: the token is minted for exactly
+ * one account, so a mismatched `AVITO_ADS_ACCOUNT_ID` fails this way and no
+ * amount of re-issuing keys fixes it. The hint is only added when the API said
+ * nothing itself — a 403 that carries its own message ("Ручка доступна только
+ * для песочницы", "нельзя создать второй аккаунт в песочнице") is already
+ * specific, and guessing over it would send the reader the wrong way.
+ */
+function authHint(err: AvitoAdsError): string | undefined {
+  const body = err.body as { message?: unknown } | null | undefined;
+  const apiExplained = typeof body?.message === "string" && body.message.trim() !== "";
+  if (apiExplained) return undefined;
+  if (err.status === 403) {
+    return "the token is issued for a single account: check AVITO_ADS_ACCOUNT_ID is the account the key was created for";
+  }
+  if (err.status === 401) {
+    return "the token was rejected: check AVITO_ADS_CLIENT_ID and AVITO_ADS_CLIENT_SECRET";
+  }
+  return undefined;
 }
 
 /**

@@ -13,7 +13,7 @@
  */
 import { AvitoAdsClient } from "./client.js";
 import { ConfigError, loadConfig } from "./config.js";
-import type { ApiResponse } from "./types.js";
+import { AvitoAdsError, type ApiResponse } from "./types.js";
 
 /** Last balance the API reported, so the summary line can show where we landed. */
 let lastBalance: number | null = null;
@@ -59,5 +59,13 @@ main().catch((err) => {
     process.exit(1);
   }
   console.error(`\nSmoke check FAILED: ${err instanceof Error ? err.message : String(err)}`);
+  // A bare 403 here is almost always the account id, not the key: the token is
+  // minted for one account, and a mismatch fails exactly like a rights problem.
+  if (err instanceof AvitoAdsError && err.status === 403) {
+    console.error(
+      "A 403 with no message means the token was issued for a different account — " +
+        "check AVITO_ADS_ACCOUNT_ID is the account whose cabinet the key was created in.",
+    );
+  }
   process.exit(1);
 });

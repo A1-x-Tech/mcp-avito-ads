@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.0] — 2026-08-11
+
+### Changed
+
+- Declared stable. The tool surface, input schemas and environment variables of 0.1.x carry over
+  unchanged — this release marks API stability, not new behaviour.
+
 ## [0.1.0] — 2026-08-11
 
 ### Added
@@ -52,5 +59,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Documentation: `README.md`, `docs/TOOLS.md`, `docs/DEVELOPMENT.md`, `docs/PUBLISHING.md`,
   `CLAUDE.md`.
 
-[Unreleased]: https://github.com/A1-x-Tech/mcp-avito-ads/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/A1-x-Tech/mcp-avito-ads/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/A1-x-Tech/mcp-avito-ads/releases/tag/v1.0.0
 [0.1.0]: https://github.com/A1-x-Tech/mcp-avito-ads/releases/tag/v0.1.0

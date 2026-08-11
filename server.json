@@ -1,0 +1,72 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.A1-x-Tech/mcp-avito-ads",
+  "title": "Avito Ads MCP",
+  "description": "MCP server for the Avito Ads API: campaigns, ad groups, creatives, statistics and balances.",
+  "websiteUrl": "https://github.com/A1-x-Tech/mcp-avito-ads#readme",
+  "repository": {
+    "url": "https://github.com/A1-x-Tech/mcp-avito-ads",
+    "source": "github"
+  },
+  "version": "0.1.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "mcp-avito-ads",
+      "version": "0.1.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "AVITO_ADS_CLIENT_ID",
+          "description": "OAuth2 client id of your Avito application (grant_type=client_credentials).",
+          "isRequired": true,
+          "isSecret": true
+        },
+        {
+          "name": "AVITO_ADS_CLIENT_SECRET",
+          "description": "OAuth2 client secret of your Avito application. Treat it as a secret.",
+          "isRequired": true,
+          "isSecret": true
+        },
+        {
+          "name": "AVITO_ADS_ACCOUNT_ID",
+          "description": "Ad account id (positive integer) every request is scoped to.",
+          "isRequired": true
+        },
+        {
+          "name": "AVITO_ADS_ENVIRONMENT",
+          "description": "Which API to talk to: production or sandbox.",
+          "isRequired": false,
+          "default": "production"
+        },
+        {
+          "name": "AVITO_ADS_API_BASE",
+          "description": "API root override, replacing host and environment prefix (e.g. a local mock).",
+          "isRequired": false,
+          "default": "https://api.avito.ru/ads/"
+        },
+        {
+          "name": "AVITO_ADS_TIMEOUT_MS",
+          "description": "Per-request timeout in milliseconds.",
+          "isRequired": false,
+          "default": "30000"
+        },
+        {
+          "name": "AVITO_ADS_MAX_RETRIES",
+          "description": "Retries on 429 (always) and on 5xx / network errors for reads only.",
+          "isRequired": false,
+          "default": "4"
+        },
+        {
+          "name": "AVITO_ADS_TOKEN_LEEWAY_SECONDS",
+          "description": "Refresh the OAuth2 token this many seconds before it expires.",
+          "isRequired": false,
+          "default": "60"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+name: Health check
+
+# End-to-end read-only check against the live Avito Ads API (api.avito.ru/ads/). Auth is an
+# OAuth2 client_credentials pair minted per run from repo secrets. smoke makes NO writes: it
+# reads account details, balance and one short page of campaigns.
+#
+# Avito's rate limit is a WEEKLY point budget that refills Mondays 00:00 UTC, and every call
+# spends from it — so this runs weekly (Monday morning, just after the refill) rather than
+# daily, plus manual dispatch. Never on push/PR, so secrets aren't exposed to PRs/forks.
+on:
+  schedule:
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    if: github.repository == 'A1-x-Tech/mcp-avito-ads'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: npm
+      - run: npm ci
+      - name: Read-only smoke check
+        run: npm run smoke
+        env:
+          AVITO_ADS_CLIENT_ID: ${{ secrets.AVITO_ADS_CLIENT_ID }}
+          AVITO_ADS_CLIENT_SECRET: ${{ secrets.AVITO_ADS_CLIENT_SECRET }}
+          AVITO_ADS_ACCOUNT_ID: ${{ secrets.AVITO_ADS_ACCOUNT_ID }}
+          # Set this secret to "sandbox" to keep the check off the production account.
+          AVITO_ADS_ENVIRONMENT: ${{ secrets.AVITO_ADS_ENVIRONMENT }}

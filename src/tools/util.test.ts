@@ -88,13 +88,13 @@ test("fail surfaces Retry-After and the point balance of a rate-limited call", (
     apiPointBalance: 0,
   });
   const text = (fail(err).content[0] as { text: string }).text;
-  assert.match(text, /retry after 3600s/);
+  assert.match(text, /повтор через 3600 с/);
   assert.match(text, /apiPointBalance: 0/);
 });
 
 test("fail adds nothing when the API sent neither number", () => {
   const text = (fail(new AvitoAdsError(400, { message: "bad request" })).content[0] as { text: string }).text;
-  assert.equal(text, "Error: HTTP 400: bad request");
+  assert.equal(text, "Ошибка: HTTP 400: bad request");
 });
 
 test("a bare 403 blames the account id, not the permissions", () => {
@@ -106,7 +106,7 @@ test("a bare 403 blames the account id, not the permissions", () => {
 
 test("a bare 401 blames the credentials", () => {
   const text = (fail(new AvitoAdsError(401, undefined)).content[0] as { text: string }).text;
-  assert.match(text, /AVITO_ADS_CLIENT_ID and AVITO_ADS_CLIENT_SECRET/);
+  assert.match(text, /AVITO_ADS_CLIENT_ID и AVITO_ADS_CLIENT_SECRET/);
 });
 
 test("a 403 that explains itself is left alone", () => {

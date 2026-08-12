@@ -26,7 +26,7 @@ function harness(opts: { throwOn?: string; environment?: string } = {}) {
   const calls: { method: string; params: unknown }[] = [];
   const make = (method: string, data: unknown) => async (params?: unknown) => {
     calls.push({ method, params });
-    if (opts.throwOn === method) throw new ValidationError("contact is required when creating an account.");
+    if (opts.throwOn === method) throw new ValidationError("При создании аккаунта требуется contact.");
     return { data, apiPointBalance: 4832 };
   };
   const client = {
@@ -93,7 +93,7 @@ test("the readers take no arguments — the account id comes from config", () =>
 
 test("create_sandbox_account is described as sandbox-only", () => {
   const { configs } = harness();
-  assert.match(configs.create_sandbox_account.description ?? "", /sandbox only/i);
+  assert.match(configs.create_sandbox_account.description ?? "", /только песочниц/i);
   assert.match(configs.create_sandbox_account.description ?? "", /AVITO_ADS_ENVIRONMENT=sandbox/);
 });
 
@@ -103,7 +103,7 @@ test("create_sandbox_account refuses to run against production, before any reque
   const { calls, tools } = harness({ environment: "production" });
   const res = await tools.create_sandbox_account(SANDBOX_ARGS);
   assert.equal(res.isError, true);
-  assert.match(res.content[0].text, /only against the sandbox/);
+  assert.match(res.content[0].text, /работает только с песочницей/);
   assert.match(res.content[0].text, /AVITO_ADS_ENVIRONMENT=sandbox/);
   assert.equal(calls.length, 0, "a refused call must not spend an API point");
 });
@@ -166,5 +166,5 @@ test("a client rejection is returned as an isError result, not thrown", async ()
   const { tools } = harness({ throwOn: "createSandboxAccount" });
   const res = await tools.create_sandbox_account({ ...SANDBOX_ARGS, contact: {} });
   assert.equal(res.isError, true);
-  assert.match(res.content[0].text, /contact is required/);
+  assert.match(res.content[0].text, /требуется contact/);
 });

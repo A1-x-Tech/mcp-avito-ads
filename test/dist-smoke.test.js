@@ -148,7 +148,7 @@ test("dist server ships usable instructions in the initialize result", async () 
   );
   // Cheap regression guard on the two facts that cost the most to rediscover:
   // this is the ads cabinet, not the seller API, and calls burn a weekly quota.
-  assert.match(instructions, /seller API/);
+  assert.match(instructions, /API продавца/);
   assert.match(instructions, /apiPointBalance/);
 });
 
@@ -166,5 +166,5 @@ test("dist server refuses to start without credentials", async () => {
   const code = await new Promise((resolve) => child.on("close", resolve));
 
   assert.equal(code, 1);
-  assert.match(stderr, /AVITO_ADS_CLIENT_ID is required/);
+  assert.match(stderr, /Требуется AVITO_ADS_CLIENT_ID/);
 });

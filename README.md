@@ -5,23 +5,23 @@
 [![Glama](https://glama.ai/mcp/servers/A1-x-Tech/mcp-avito-ads/badges/score.svg)](https://glama.ai/mcp/servers/A1-x-Tech/mcp-avito-ads)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
-MCP server for the **Avito Ads API (Avito Reklama)** — the media / performance advertising
-cabinet. Ask Claude, Cursor, Codex or any other MCP client about your campaigns, ad groups,
-creatives and their statistics in plain language; move money between agency sub-accounts and
-file the ORD paperwork without opening the web cabinet.
+MCP-сервер для **API Авито Рекламы (Avito Ads)** — рекламного кабинета медийных и
+performance-кампаний. Спрашивайте Claude, Cursor, Codex или любой другой MCP-клиент о кампаниях,
+группах объявлений, креативах и их статистике на естественном языке; переводите деньги между
+субаккаунтами агентства и оформляйте документы ОРД, не открывая веб-кабинет.
 
-> **This is not the Avito seller API.** Avito Ads is the advertising cabinet (display and
-> performance campaigns bought by an advertiser or an agency). Listings, chats with buyers,
-> orders and item promotion live behind a different API — the community server
-> [`avito-mcp`](https://www.npmjs.com/search?q=avito-mcp) covers those, and its credentials are
-> not interchangeable with these. If you came here to answer a buyer's message, you are in the
-> wrong repository.
+> **Это не API продавца Авито.** Авито Реклама — рекламный кабинет: медийные и
+> performance-кампании, которые покупает рекламодатель или агентство. Товарные объявления,
+> переписка с покупателями, заказы и продвижение товаров живут за другим API — его закрывает
+> community-сервер [`avito-mcp`](https://www.npmjs.com/search?q=avito-mcp); доступы от него сюда
+> не подходят, и наоборот. Если вы пришли ответить на сообщение покупателя, это не тот
+> репозиторий.
 
-## Quick start
+## Быстрый старт
 
-1. [Get a Client Key and Client Secret](#getting-access) in the Avito Ads cabinet
-   (Administrator role required) and note your ad account id.
-2. Add the server — for example, to Claude Code ([other clients](#installation)):
+1. [Получите Client Key и Client Secret](#получение-доступа) в кабинете Авито Рекламы
+   (нужна роль администратора) и запишите id рекламного аккаунта.
+2. Добавьте сервер — например, в Claude Code ([другие клиенты](#установка)):
 
    ```bash
    claude mcp add avito-ads \
@@ -31,70 +31,70 @@ file the ORD paperwork without opening the web cabinet.
      -- npx -y mcp-avito-ads@latest
    ```
 
-3. Ask the assistant: "Show me the campaigns of my Avito account and last week's spend per group."
+3. Спросите ассистента: «Покажи кампании моего аккаунта Авито и расход за прошлую неделю по группам».
 
-## What it can do
+## Что умеет
 
-- **Ad objects (read-only)** — `list_campaigns`, `list_groups`, `list_creatives`: paginated,
-  filterable lists of campaigns, ad groups and the creatives themselves, with status, budget,
-  bid, payment model, flight dates and ORD legal info.
-- **Statistics** — `campaign_stats`, `group_stats`, `creative_stats`: impressions, clicks, CTR,
-  spend, bonus spend, CPM, CPC and the video quartiles / VTR, per day and as a period total.
-- **Money knobs** — `change_group_budget` and `change_group_price`: the budget and the bid of one
-  ad group. These are the **only** editable fields in the whole ad object tree.
-- **Account, balances and agency sub-accounts** — `get_account`, `get_balance`, `list_child_accounts`,
+- **Рекламные объекты (только чтение)** — `list_campaigns`, `list_groups`, `list_creatives`:
+  постраничные списки кампаний, групп объявлений и самих креативов с фильтрами, статусом,
+  бюджетом, ставкой, моделью оплаты, сроками размещения и юридическими данными ОРД.
+- **Статистика** — `campaign_stats`, `group_stats`, `creative_stats`: показы, клики, CTR,
+  расход, расход бонусов, CPM, CPC и квартили видео / VTR — по дням и итогом за период.
+- **Деньги** — `change_group_budget` и `change_group_price`: бюджет и ставка одной группы
+  объявлений. Это **единственные** редактируемые поля во всём дереве рекламных объектов.
+- **Аккаунт, балансы и субаккаунты агентства** — `get_account`, `get_balance`, `list_child_accounts`,
   `list_child_accounts_with_balances`, `create_child_account`, `transfer_funds`, `transfer_bonus`.
-- **ORD paperwork** — `create_advertiser`, `list_advertisers`, `create_contract`, `list_contracts`:
-  the advertiser and contract records Russian ad-marking law requires before a campaign can run.
-- **Account access** — `list_users`, `add_user`, `set_user_role`, `delete_user`.
-- **Universal `raw_request`** — call any API path directly, for endpoints without a dedicated tool.
+- **Документы ОРД** — `create_advertiser`, `list_advertisers`, `create_contract`, `list_contracts`:
+  записи о рекламодателе и договоре, без которых по закону о маркировке рекламы кампанию не запустить.
+- **Доступы к аккаунту** — `list_users`, `add_user`, `set_user_role`, `delete_user`.
+- **Универсальный `raw_request`** — прямой вызов любого пути API, для эндпоинтов без отдельного инструмента.
 
-Full reference: [docs/TOOLS.md](https://github.com/A1-x-Tech/mcp-avito-ads/blob/main/docs/TOOLS.md) — 25 tools.
+Полный справочник: [docs/TOOLS.md](https://github.com/A1-x-Tech/mcp-avito-ads/blob/main/docs/TOOLS.md) — 25 инструментов.
 
-## What it cannot do
+## Чего не умеет
 
-The Avito Ads API surface is deliberately narrow, and no MCP server can widen it:
+API Авито Рекламы намеренно узкий, и никакой MCP-сервер его не расширит:
 
-- **Campaigns, ad groups and creatives cannot be created, edited, paused, resumed, archived or
-  deleted** through the API. That work stays in the web cabinet.
-- **Targeting is not exposed at all** — neither for reading nor for writing.
-- **Creatives cannot be uploaded** or sent to moderation.
-- **Advertisers and contracts are append-only** — there is no edit and no delete endpoint, so a
-  wrong record stays on the account.
-- **Money transfers cannot be undone.** There is no cancel endpoint and no transfer log.
-- The account is fixed by `AVITO_ADS_ACCOUNT_ID`; no tool takes an account id, so a model cannot
-  wander into another account (`transfer_funds` picks only the *destination*).
+- **Кампании, группы объявлений и креативы нельзя создавать, редактировать, ставить на паузу,
+  возобновлять, архивировать и удалять** через API. Это остаётся в веб-кабинете.
+- **Таргетинги API не отдаёт вообще** — ни на чтение, ни на запись.
+- **Креативы нельзя загрузить** и нельзя отправить на модерацию.
+- **Рекламодатели и договоры — только на добавление**: эндпоинтов изменения и удаления нет,
+  поэтому ошибочная запись так и останется в аккаунте.
+- **Переводы денег необратимы.** Нет ни эндпоинта отмены, ни журнала переводов.
+- Аккаунт задан переменной `AVITO_ADS_ACCOUNT_ID`; ни один инструмент не принимает id аккаунта,
+  поэтому модель не уйдёт в чужой (`transfer_funds` выбирает только *получателя*).
 
-## The weekly point quota
+## Недельная квота баллов
 
-This is the single most surprising operational fact about the Avito Ads API, so plan around it:
+Это самая неожиданная в эксплуатации особенность API Авито Рекламы, так что планируйте с оглядкой на неё:
 
-- Every call spends **points from a weekly budget**, not from a per-second rate limit.
-- The budget is **replenished on Mondays at 00:00 UTC**. Burn it on Tuesday and the account is
-  effectively read-nothing until the next Monday.
-- Every response carries an `Api-Point-Balance` header, and this server lifts it into **every tool
-  result** as `apiPointBalance` (`null` if the API did not send the header). The assistant sees the
-  remaining budget with every answer and can pace itself.
+- Каждый вызов тратит **баллы из недельного бюджета**, а не упирается в лимит запросов в секунду.
+- Бюджет **пополняется по понедельникам в 00:00 UTC**. Истратили его во вторник — до следующего
+  понедельника аккаунт фактически ничего не прочитает.
+- В каждом ответе приходит заголовок `Api-Point-Balance`, и сервер прокидывает его в **каждый
+  результат инструмента** как `apiPointBalance` (`null`, если API заголовок не прислал). Ассистент
+  видит остаток с каждым ответом и может распределять запросы сам.
 
-Practical consequences worth telling your assistant about:
+Практические следствия, о которых стоит предупредить ассистента:
 
-- Prefer **one wide statistics period** over many narrow ones — the 100-day cap per request exists
-  precisely so a long report is a single call.
-- Use `limit` up to 100 instead of walking pages of 20.
-- Client-side validation (dates, amounts, contract rules, page bounds) is done **before** the
-  request, so a malformed call costs no points.
-- On an HTTP 429 the error itself reports `Retry-After` (as the server sent it) and the point
-  balance the call failed with, so the assistant knows when it can come back.
+- Лучше **один широкий период статистики**, чем много узких: ограничение в 100 дней на запрос
+  существует ровно затем, чтобы длинный отчёт был одним вызовом.
+- `limit` лучше ставить до 100, а не обходить страницы по 20.
+- Проверки на стороне клиента (даты, суммы, правила договоров, границы страниц) выполняются
+  **до** запроса, поэтому некорректный вызов не стоит баллов.
+- При HTTP 429 в самой ошибке приходят `Retry-After` (как его прислал сервер) и остаток баллов,
+  с которым вызов не прошёл, — так ассистент знает, когда можно вернуться.
 
-## Examples
+## Примеры
 
-- "How much did campaign 4242 spend last month, broken down by ad group?"
-- "Which of my child accounts is out of money?"
-- "Raise the bid of ad group 101 to 350 rubles."
-- "List the creatives that failed moderation."
-- "Register the advertiser with INN 7707083893 and a service contract for it."
+- «Сколько кампания 4242 потратила в прошлом месяце в разбивке по группам объявлений?»
+- «У каких дочерних аккаунтов кончились деньги?»
+- «Подними ставку группы объявлений 101 до 350 рублей.»
+- «Покажи креативы, не прошедшие модерацию.»
+- «Зарегистрируй рекламодателя с ИНН 7707083893 и договор оказания услуг для него.»
 
-## Installation
+## Установка
 
 <details open>
 <summary><b>Claude Code</b></summary>
@@ -135,7 +135,7 @@ claude mcp add avito-ads \
 <details>
 <summary><b>Cursor</b></summary>
 
-`~/.cursor/mcp.json` (or `.cursor/mcp.json` in the project)
+`~/.cursor/mcp.json` (или `.cursor/mcp.json` в проекте)
 
 ```json
 {
@@ -158,7 +158,7 @@ claude mcp add avito-ads \
 <details>
 <summary><b>VS Code</b></summary>
 
-`.vscode/mcp.json` — the key is `servers` (not `mcpServers`)
+`.vscode/mcp.json` — ключ `servers` (не `mcpServers`)
 
 ```json
 {
@@ -179,90 +179,93 @@ claude mcp add avito-ads \
 
 </details>
 
-## Getting access
+## Получение доступа
 
-1. Open the **Avito Ads cabinet** with a user that has the **Administrator** role on the ad
-   account — a viewer cannot issue API credentials.
-2. Create an API application there and copy its **Client Key** and **Client Secret**. They are the
-   OAuth2 `client_credentials` pair this server exchanges for a Bearer token at
+1. Откройте **кабинет Авито Рекламы** под пользователем с ролью **администратора** рекламного
+   аккаунта — пользователь с ролью `viewer` доступы к API выдать не может.
+2. Создайте там приложение API и скопируйте его **Client Key** и **Client Secret**. Это пара для
+   OAuth2 `client_credentials`, которую сервер меняет на Bearer-токен по адресу
    `https://api.avito.ru/token`.
-3. Note the **ad account id** the credentials belong to — every API path is scoped to it
-   (`v1/account/{accountID}/...`).
-4. Put them into `AVITO_ADS_CLIENT_ID`, `AVITO_ADS_CLIENT_SECRET` and `AVITO_ADS_ACCOUNT_ID`.
+3. Запишите **id рекламного аккаунта**, которому принадлежат доступы, — к нему привязан каждый
+   путь API (`v1/account/{accountID}/...`).
+4. Пропишите их в `AVITO_ADS_CLIENT_ID`, `AVITO_ADS_CLIENT_SECRET` и `AVITO_ADS_ACCOUNT_ID`.
 
-⚠️ The secret is stored in **plain text** in the MCP client's config — treat it as a password.
-The agency child accounts created by `create_child_account` come with their own fresh
-`clientKey` / `clientSecret`, returned **once** and not re-readable afterwards.
+⚠️ Секрет хранится в конфиге MCP-клиента **открытым текстом** — относитесь к нему как к паролю.
+У дочерних аккаунтов агентства, созданных через `create_child_account`, свои собственные
+`clientKey` / `clientSecret`: они возвращаются **один раз** и потом уже не читаются.
 
-### Sandbox
+### Песочница
 
-Set `AVITO_ADS_ENVIRONMENT=sandbox` and the server talks to `https://api.avito.ru/ads-sandbox/`
-instead of `https://api.avito.ru/ads/`. Use it to rehearse the write tools without touching real
-money. `create_sandbox_account` mints a test account there — the server refuses that tool unless
-`AVITO_ADS_ENVIRONMENT=sandbox` — and the returned id is **not** adopted by the running server:
-put it into `AVITO_ADS_ACCOUNT_ID` to use it.
+Задайте `AVITO_ADS_ENVIRONMENT=sandbox` — и сервер пойдёт на `https://api.avito.ru/ads-sandbox/`
+вместо `https://api.avito.ru/ads/`. Так можно отрепетировать инструменты записи, не трогая
+настоящие деньги. Тестовый аккаунт заводит `create_sandbox_account` — вне
+`AVITO_ADS_ENVIRONMENT=sandbox` сервер этот инструмент не выполняет, — и запущенный сервер **не**
+подхватывает возвращённый id: чтобы работать с этим аккаунтом, пропишите id в
+`AVITO_ADS_ACCOUNT_ID`.
 
-Three things worth knowing before you spend the attempt, none of them documented upstream:
+Три вещи, которые стоит знать до того, как потратите эту единственную попытку, — ни одной из них
+нет в официальной документации:
 
-- **One account per key.** A second `create_sandbox_account` answers `403 нельзя создать второй
+- **Один аккаунт на ключ.** На второй `create_sandbox_account` приходит `403 нельзя создать второй
   аккаунт в песочнице`.
-- **Test data is generated once, at creation, and only if the account already has a valid
-  contract.** Without one the account is created with a warning and stays empty — no campaigns, no
-  groups, no statistics to read — and registering a contract afterwards does not backfill it.
-- **The sandbox is not a full mirror**: `get_balance` answers `404` there.
+- **Тестовые данные генерируются один раз, в момент создания, и только если у аккаунта уже есть
+  действующий договор.** Без договора аккаунт создаётся с предупреждением и остаётся пустым — ни
+  кампаний, ни групп, ни статистики, — а регистрация договора задним числом их не добавит.
+- **Песочница — не полная копия боевого API**: `get_balance` отвечает там `404`.
 
-Quotas are per environment: production and the sandbox each carry their own weekly point balance.
+Квоты считаются по окружениям: у продакшена и песочницы свой недельный баланс баллов.
 
-## Configuration
+## Настройка
 
-| Variable | Required | Default | Description |
+| Переменная | Обяз. | По умолчанию | Описание |
 |---|---|---|---|
-| `AVITO_ADS_CLIENT_ID` | yes | — | OAuth2 client id (Client Key) of your Avito application. |
-| `AVITO_ADS_CLIENT_SECRET` | yes | — | OAuth2 client secret. Treat as a password. |
-| `AVITO_ADS_ACCOUNT_ID` | yes | — | Ad account id, a positive integer. Injected into every path. |
-| `AVITO_ADS_ENVIRONMENT` | no | `production` | `production` or `sandbox`. |
-| `AVITO_ADS_TIMEOUT_MS` | no | `30000` | Per-request timeout, ms (covers reading the body). |
-| `AVITO_ADS_MAX_RETRIES` | no | `4` | Retries on 429; on 5xx/network for reads only. |
-| `AVITO_ADS_TOKEN_LEEWAY_SECONDS` | no | `60` | Refresh the access token this long before it expires. |
-| `AVITO_ADS_API_BASE` | no | `https://api.avito.ru/ads/` | API root override (replaces the environment prefix too). |
+| `AVITO_ADS_CLIENT_ID` | да | — | OAuth2 client id (Client Key) вашего приложения Авито. |
+| `AVITO_ADS_CLIENT_SECRET` | да | — | OAuth2 client secret. Относитесь к нему как к паролю. |
+| `AVITO_ADS_ACCOUNT_ID` | да | — | Id рекламного аккаунта, целое положительное число. Подставляется в каждый путь. |
+| `AVITO_ADS_ENVIRONMENT` | нет | `production` | `production` или `sandbox`. |
+| `AVITO_ADS_TIMEOUT_MS` | нет | `30000` | Таймаут одного запроса, мс (включая чтение тела ответа). |
+| `AVITO_ADS_MAX_RETRIES` | нет | `4` | Повторы при 429; при 5xx и сетевых ошибках — только для чтений. |
+| `AVITO_ADS_TOKEN_LEEWAY_SECONDS` | нет | `60` | За сколько секунд до истечения обновлять access-токен. |
+| `AVITO_ADS_API_BASE` | нет | `https://api.avito.ru/ads/` | Переопределение корня API (заменяет и префикс окружения). |
 
-The variable names match the official [Avito Ads SDK](https://github.com/avito-tech/avito-ads-sdk-typescript),
-so one set of credentials works for both.
+Имена переменных совпадают с официальным [Avito Ads SDK](https://github.com/avito-tech/avito-ads-sdk-typescript),
+так что один набор доступов работает и там, и здесь.
 
-## Requirements
+## Требования
 
-- Node.js 20+ (run through `npx`, no separate install needed).
-- An Avito Ads account with API credentials — see [Getting access](#getting-access).
+- Node.js 20+ (запускается через `npx`, отдельная установка не нужна).
+- Аккаунт Авито Рекламы с доступами к API — см. [Получение доступа](#получение-доступа).
 
-## Safety
+## Безопасность
 
-- Writes are grouped by intent through MCP tool annotations: reads are `readOnlyHint`, budget /
-  bid / role changes are idempotent writes, creates are non-idempotent, and money transfers plus
-  `delete_user` are marked **destructive** — clients that ask for confirmation will ask for these.
-- `raw_request` requires an explicit `confirmWrite: true` for `POST` and `DELETE`, refuses any
-  path that escapes the API base (SSRF guard), so the Bearer token cannot be sent to another host,
-  and refuses any path addressing an account other than `AVITO_ADS_ACCOUNT_ID` — including one that
-  tries to get there through `..`.
-- Writes are never retried after a network error or a 5xx — a repeated funds transfer would move
-  the money twice. Reads are retried with backoff.
+- Записи размечены по смыслу через аннотации MCP-инструментов: чтения — `readOnlyHint`, смена
+  бюджета, ставки и роли — идемпотентные записи, создание — неидемпотентные, а переводы денег и
+  `delete_user` помечены как **разрушительные** (destructive): клиенты, которые спрашивают
+  подтверждение, спросят именно про них.
+- `raw_request` требует явного `confirmWrite: true` для `POST` и `DELETE`, отклоняет любой путь,
+  выходящий за корень API (защита от SSRF), — так Bearer-токен не уйдёт на чужой хост, — и
+  отклоняет любой путь к аккаунту, отличному от `AVITO_ADS_ACCOUNT_ID`, — в том числе такой,
+  который пытается добраться до него через `..`.
+- Записи никогда не повторяются после сетевой ошибки или 5xx: повторный перевод средств отправил
+  бы деньги дважды. Чтения повторяются с нарастающей паузой.
 
-## Documentation
+## Документация
 
-- [All tools](https://github.com/A1-x-Tech/mcp-avito-ads/blob/main/docs/TOOLS.md) — full reference with inputs and outputs.
-- [Development](https://github.com/A1-x-Tech/mcp-avito-ads/blob/main/docs/DEVELOPMENT.md) — build, tests, smoke check, telemetry.
-- [Publishing](https://github.com/A1-x-Tech/mcp-avito-ads/blob/main/docs/PUBLISHING.md) — release and MCP-catalog listing.
+- [Все инструменты](https://github.com/A1-x-Tech/mcp-avito-ads/blob/main/docs/TOOLS.md) — полный справочник с параметрами и ответами.
+- [Разработка](https://github.com/A1-x-Tech/mcp-avito-ads/blob/main/docs/DEVELOPMENT.md) — сборка, тесты, smoke-проверка, телеметрия.
+- [Публикация](https://github.com/A1-x-Tech/mcp-avito-ads/blob/main/docs/PUBLISHING.md) — релиз и размещение в каталоге MCP.
 
-## See also
+## Смотрите также
 
-- **[Ask Ads](https://askads.ru)** — a chat analyst and watchdog for ad accounts by the authors of
-  this server: budget-burn and tracking-breakage alerts in Telegram.
-- **[Avito Ads SDK for TypeScript](https://github.com/avito-tech/avito-ads-sdk-typescript)** — the
-  official SDK; this server implements the same wire protocol independently.
+- **[Ask Ads](https://askads.ru)** — чат-аналитик и «Сторож» рекламных кабинетов от авторов этого
+  сервера: алерты о сливах бюджета и поломках трекинга — в Telegram.
+- **[Avito Ads SDK для TypeScript](https://github.com/avito-tech/avito-ads-sdk-typescript)** —
+  официальный SDK; этот сервер независимо реализует тот же протокол обмена.
 
-## Support
+## Поддержка
 
-Questions, ideas and feature requests — Telegram: [@gistrec](http://t.me/gistrec).
+Вопросы, идеи и доработки — пишите в Telegram: [@gistrec](http://t.me/gistrec).
 
-## License
+## Лицензия
 
-MIT — see [LICENSE](./LICENSE).
+MIT — см. [LICENSE](./LICENSE).

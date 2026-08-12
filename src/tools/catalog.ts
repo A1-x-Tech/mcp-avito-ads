@@ -75,53 +75,53 @@ const idList = (description: string) => entityIds().optional().describe(descript
 const dateRange = (description: string) =>
   z
     .object({
-      from: isoDate().describe("Range start, YYYY-MM-DD."),
-      to: isoDate().describe("Range end, YYYY-MM-DD."),
+      from: isoDate().describe("Начало диапазона, YYYY-MM-DD."),
+      to: isoDate().describe("Конец диапазона, YYYY-MM-DD."),
     })
     .optional()
     .describe(description);
 
-const limitField = () => pageLimit().optional().describe("Page size, 1..100. Default 20.");
+const limitField = () => pageLimit().optional().describe("Размер страницы, 1..100. По умолчанию 20.");
 
-const pageField = () => pageNumber().optional().describe("1-based page number. Default 1.");
+const pageField = () => pageNumber().optional().describe("Номер страницы, нумерация с 1. По умолчанию 1.");
 
 const paymentModelsField = () =>
-  z.array(paymentModelEnum()).optional().describe("Payment models to keep: CPM, CPC.");
+  z.array(paymentModelEnum()).optional().describe("Оставить только эти модели оплаты: CPM, CPC.");
 
 const campaignTypesField = () =>
-  z.array(campaignTypeEnum()).optional().describe("Campaign types to keep: textImage, HTML, video.");
+  z.array(campaignTypeEnum()).optional().describe("Оставить только эти типы кампаний: textImage, HTML, video.");
 
 const rawFilter = () =>
   filterObject()
     .optional()
     .describe(
-      "Escape hatch: extra filter keys merged as-is into the request filter (API spelling). The named fields above win on conflict.",
+      "Универсальный фильтр: дополнительные ключи, которые подмешиваются в фильтр запроса как есть (в написании API). При конфликте побеждают именованные поля выше.",
     );
 
 export function registerCatalogTools(server: McpServer, client: AvitoAdsClient): void {
   server.registerTool(
     "list_campaigns",
     {
-      title: "List ad campaigns",
+      title: "Список рекламных кампаний",
       annotations: READ_ONLY,
       description:
-        "Lists the account's ad campaigns, one page at a time. Returns {total, items, page, limit, hasNextPage} plus apiPointBalance — the weekly API points left, which refill Mondays 00:00 UTC. Each campaign carries id, name, status, budget (rubles), paymentModel (CPM/CPC), campaignType, startDate/endDate, advertiserId, contractId, managerID and timestamps. All filter fields are AND-ed and each list keeps only the values it names. This API cannot create, edit, pause, resume, archive or delete a campaign and cannot touch its targeting — the only writes available anywhere are change_group_budget and change_group_price on an ad group.",
+        "Перечисляет рекламные кампании аккаунта постранично. Возвращает {total, items, page, limit, hasNextPage} плюс apiPointBalance — остаток недельных баллов API, которые пополняются по понедельникам в 00:00 UTC. У каждой кампании есть id, name, status, budget (рубли), paymentModel (CPM/CPC), campaignType, startDate/endDate, advertiserId, contractId, managerID и отметки времени. Поля фильтра объединяются по И, и каждый список оставляет только перечисленные в нём значения. Через этот API нельзя создать, изменить, приостановить, возобновить, заархивировать или удалить кампанию и нельзя тронуть её таргетинг — единственные доступные где-либо изменения это change_group_budget и change_group_price для группы объявлений.",
       inputSchema: {
-        ids: idList("Campaign ids to keep."),
+        ids: idList("Оставить кампании с этими id."),
         statuses: z
           .array(campaignStatusEnum())
           .optional()
           .describe(
-            "Campaign statuses to keep: draft, in_moderation, moderation_failed, partial_moderation, active, paused, stopped, finished, archived.",
+            "Оставить кампании с этими статусами: draft, in_moderation, moderation_failed, partial_moderation, active, paused, stopped, finished, archived.",
           ),
         campaignTypes: campaignTypesField(),
         paymentModels: paymentModelsField(),
-        advertisers: idList("Advertiser ids whose campaigns to keep."),
-        managers: idList("Manager (account user) ids whose campaigns to keep."),
-        contractIds: idList("Contract ids whose campaigns to keep."),
-        additionalAgreementIds: idList("Additional-agreement ids whose campaigns to keep."),
-        createdAt: dateRange("Keep campaigns created in this range: {from, to}, YYYY-MM-DD."),
-        timeFrame: dateRange("Keep campaigns whose flight window falls in this range: {from, to}, YYYY-MM-DD."),
+        advertisers: idList("Оставить кампании этих рекламодателей (по id)."),
+        managers: idList("Оставить кампании этих менеджеров — пользователей аккаунта (по id)."),
+        contractIds: idList("Оставить кампании по этим договорам (по id)."),
+        additionalAgreementIds: idList("Оставить кампании по этим дополнительным соглашениям (по id)."),
+        createdAt: dateRange("Оставить кампании, созданные в этом диапазоне: {from, to}, YYYY-MM-DD."),
+        timeFrame: dateRange("Оставить кампании, период размещения которых попадает в этот диапазон: {from, to}, YYYY-MM-DD."),
         filter: rawFilter(),
         limit: limitField(),
         page: pageField(),
@@ -139,27 +139,27 @@ export function registerCatalogTools(server: McpServer, client: AvitoAdsClient):
   server.registerTool(
     "list_groups",
     {
-      title: "List ad groups",
+      title: "Список групп объявлений",
       annotations: READ_ONLY,
       description:
-        "Lists the account's ad groups, one page at a time. Returns {total, items, page, limit, hasNextPage} plus apiPointBalance (weekly API points left). The group is the level that holds the money: each item carries id, name, campaignID, status, budget and price (the bid) in rubles, paymentModel, campaignType, advertiserID, haveCreative and timestamps. Use change_group_budget / change_group_price to change those two numbers — they are the only writable fields in the whole ad object tree. Groups cannot be created, renamed, paused, resumed or deleted here, and their targeting is not exposed.",
+        "Перечисляет группы объявлений аккаунта постранично. Возвращает {total, items, page, limit, hasNextPage} плюс apiPointBalance (остаток недельных баллов API). Группа — тот уровень, на котором лежат деньги: в каждом элементе id, name, campaignID, status, budget и price (ставка) в рублях, paymentModel, campaignType, advertiserID, haveCreative и отметки времени. Эти два числа меняют change_group_budget / change_group_price — других изменяемых полей во всём дереве рекламных объектов нет. Создать, переименовать, приостановить, возобновить или удалить группу здесь нельзя, таргетинг групп не выведен.",
       inputSchema: {
-        ids: idList("Ad group ids to keep."),
-        campaignIds: idList("Campaign ids whose groups to keep."),
+        ids: idList("Оставить группы объявлений с этими id."),
+        campaignIds: idList("Оставить группы этих кампаний (по id)."),
         statuses: z
           .array(groupStatusEnum())
           .optional()
           .describe(
-            "Group statuses to keep: draft, in_moderation, moderation_failed, will_launch_soon, active, will_stop_soon, pausing, paused, unpausing, stopped, finished, archived.",
+            "Оставить группы с этими статусами: draft, in_moderation, moderation_failed, will_launch_soon, active, will_stop_soon, pausing, paused, unpausing, stopped, finished, archived.",
           ),
         paymentModels: paymentModelsField(),
         paces: z
           .array(z.string().min(1))
           .optional()
-          .describe("Budget pacing modes to keep. Free-form: the SDK documents no fixed vocabulary for this filter."),
-        advertisers: idList("Advertiser ids whose groups to keep."),
-        managers: idList("Manager (account user) ids whose groups to keep."),
-        timeFrame: dateRange("Keep groups whose flight window falls in this range: {from, to}, YYYY-MM-DD."),
+          .describe("Оставить группы с этими режимами распределения бюджета. Значения произвольные: фиксированного словаря для этого фильтра в SDK нет."),
+        advertisers: idList("Оставить группы этих рекламодателей (по id)."),
+        managers: idList("Оставить группы этих менеджеров — пользователей аккаунта (по id)."),
+        timeFrame: dateRange("Оставить группы, период размещения которых попадает в этот диапазон: {from, to}, YYYY-MM-DD."),
         filter: rawFilter(),
         limit: limitField(),
         page: pageField(),
@@ -177,25 +177,25 @@ export function registerCatalogTools(server: McpServer, client: AvitoAdsClient):
   server.registerTool(
     "list_creatives",
     {
-      title: "List creatives",
+      title: "Список креативов",
       annotations: READ_ONLY,
       description:
-        "Lists the account's creatives — the ads themselves — one page at a time. Returns {total, items, page, limit, hasNextPage} plus apiPointBalance (weekly API points left). Each creative carries id, name, title, description, buttonText, link, status, groupID, campaignID, advertiserID, paymentModel, campaignType and legalInfo (the ad-registry/ERID data). Read-only: creatives cannot be uploaded, edited, sent to moderation, paused or deleted through this API — only ad-group budget and bid are writable.",
+        "Перечисляет креативы аккаунта — сами объявления — постранично. Возвращает {total, items, page, limit, hasNextPage} плюс apiPointBalance (остаток недельных баллов API). У каждого креатива есть id, name, title, description, buttonText, link, status, groupID, campaignID, advertiserID, paymentModel, campaignType и legalInfo (данные рекламного реестра / ERID). Только чтение: загрузить, изменить, отправить на модерацию, приостановить или удалить креатив через этот API нельзя — изменять можно только бюджет и ставку группы объявлений.",
       inputSchema: {
-        ids: idList("Creative ids to keep."),
-        groupIds: idList("Ad group ids whose creatives to keep."),
-        campaignIds: idList("Campaign ids whose creatives to keep."),
+        ids: idList("Оставить креативы с этими id."),
+        groupIds: idList("Оставить креативы этих групп объявлений (по id)."),
+        campaignIds: idList("Оставить креативы этих кампаний (по id)."),
         statuses: z
           .array(creativeStatusEnum())
           .optional()
           .describe(
-            "Creative statuses to keep: draft, ready_for_moderation, in_moderation, moderation_failed, erir_registration, active, paused, stopped, finished, archived.",
+            "Оставить креативы с этими статусами: draft, ready_for_moderation, in_moderation, moderation_failed, erir_registration, active, paused, stopped, finished, archived.",
           ),
         campaignTypes: campaignTypesField(),
         paymentModels: paymentModelsField(),
-        advertisers: idList("Advertiser ids whose creatives to keep."),
-        managers: idList("Manager (account user) ids whose creatives to keep."),
-        timeFrame: dateRange("Keep creatives whose flight window falls in this range: {from, to}, YYYY-MM-DD."),
+        advertisers: idList("Оставить креативы этих рекламодателей (по id)."),
+        managers: idList("Оставить креативы этих менеджеров — пользователей аккаунта (по id)."),
+        timeFrame: dateRange("Оставить креативы, период размещения которых попадает в этот диапазон: {from, to}, YYYY-MM-DD."),
         filter: rawFilter(),
         limit: limitField(),
         page: pageField(),
@@ -213,13 +213,13 @@ export function registerCatalogTools(server: McpServer, client: AvitoAdsClient):
   server.registerTool(
     "change_group_budget",
     {
-      title: "Change ad group budget",
+      title: "Изменить бюджет группы объявлений",
       annotations: WRITE,
       description:
-        "Sets one ad group's budget to the given amount in rubles (at least 1). The value replaces the current budget rather than adding to it, so repeating the call is safe. Only groups on manual bid management accept it; the API rejects the rest. Returns the API's acknowledgement plus apiPointBalance. It cannot change the campaign budget, the bid (use change_group_price), or the group's status — this API cannot pause, resume or delete a group at all. Read the current budget with list_groups first.",
+        "Задаёт бюджет одной группы объявлений в рублях (не меньше 1). Значение заменяет текущий бюджет, а не прибавляется к нему, поэтому повторный вызов безопасен. Принимают его только группы с ручным управлением ставками, остальным API отказывает. Возвращает подтверждение API плюс apiPointBalance. Изменить бюджет кампании, ставку (для неё есть change_group_price) или статус группы нельзя — приостановить, возобновить или удалить группу этот API вообще не умеет. Текущий бюджет стоит сначала посмотреть через list_groups.",
       inputSchema: {
-        groupId: entityId().describe("Id of the ad group to change, from list_groups."),
-        budget: rubleAmount().describe("New budget in rubles, at least 1. Replaces the current value."),
+        groupId: entityId().describe("Id изменяемой группы объявлений, из list_groups."),
+        budget: rubleAmount().describe("Новый бюджет в рублях, не меньше 1. Заменяет текущее значение."),
       },
     },
     async ({ groupId, budget }) => {
@@ -234,13 +234,13 @@ export function registerCatalogTools(server: McpServer, client: AvitoAdsClient):
   server.registerTool(
     "change_group_price",
     {
-      title: "Change ad group bid",
+      title: "Изменить ставку группы объявлений",
       annotations: WRITE,
       description:
-        "Sets one ad group's bid (the API calls it price) to the given amount in rubles (at least 1). The unit follows the group's paymentModel: rubles per 1000 impressions for CPM, rubles per click for CPC. The value replaces the current bid rather than adding to it, so repeating the call is safe. Only groups on manual bid management accept it. Returns the API's acknowledgement plus apiPointBalance. It cannot change the budget (use change_group_budget) or the group's status — this API cannot pause, resume or delete a group at all. Read the current bid from the price field of list_groups.",
+        "Задаёт ставку одной группы объявлений (в API она называется price) в рублях (не меньше 1). Единица зависит от paymentModel группы: рубли за 1000 показов при CPM, рубли за клик при CPC. Значение заменяет текущую ставку, а не прибавляется к ней, поэтому повторный вызов безопасен. Принимают его только группы с ручным управлением ставками. Возвращает подтверждение API плюс apiPointBalance. Изменить бюджет (для него есть change_group_budget) или статус группы нельзя — приостановить, возобновить или удалить группу этот API вообще не умеет. Текущую ставку показывает поле price в list_groups.",
       inputSchema: {
-        groupId: entityId().describe("Id of the ad group to change, from list_groups."),
-        price: rubleAmount().describe("New bid in rubles, at least 1. Replaces the current value."),
+        groupId: entityId().describe("Id изменяемой группы объявлений, из list_groups."),
+        price: rubleAmount().describe("Новая ставка в рублях, не меньше 1. Заменяет текущее значение."),
       },
     },
     async ({ groupId, price }) => {

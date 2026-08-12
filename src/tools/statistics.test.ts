@@ -77,8 +77,8 @@ test("every description names the metrics and the weekly point budget", () => {
     for (const metric of ["views", "clicks", "ctr", "spend", "cpm", "cpc", "vtr"]) {
       assert.match(text, new RegExp(`\\b${metric}\\b`), `${name} should document the ${metric} metric`);
     }
-    assert.match(text, /API points/, `${name} should warn about the weekly point budget`);
-    assert.match(text, /100 days/, `${name} should state the 100-day period cap`);
+    assert.match(text, /баллы API/, `${name} should warn about the weekly point budget`);
+    assert.match(text, /100 дней/, `${name} should state the 100-day period cap`);
   }
 });
 
@@ -165,7 +165,7 @@ test("no description claims an omitted id list means every entity of the campaig
   for (const name of ["group_stats", "creative_stats"]) {
     const text = configs[name].description ?? "";
     assert.doesNotMatch(text, /omit it for every/i, `${name} must not promise unverified wire behaviour`);
-    assert.match(text, /required/i, `${name} must say the id list is required`);
+    assert.match(text, /обязательн/i, `${name} must say the id list is required`);
   }
 });
 
@@ -244,7 +244,7 @@ test("an over-long period is refused before any request — no API point is spen
   const h = wireHarness();
   const res = await h.tools.campaign_stats({ campaignId: 12, dateFrom: "2026-01-01", dateTo: "2026-12-31" });
   assert.equal(res.isError, true);
-  assert.match(res.content[0].text, /100 days/);
+  assert.match(res.content[0].text, /100 дней/);
   assert.equal(h.wire.length, 0);
 });
 
@@ -252,7 +252,7 @@ test("dateFrom later than dateTo is refused before any request", async () => {
   const h = wireHarness();
   const res = await h.tools.creative_stats({ campaignId: 12, dateFrom: "2026-02-01", dateTo: "2026-01-01", creativeIds: [9001] });
   assert.equal(res.isError, true);
-  assert.match(res.content[0].text, /dateFrom must not be later than dateTo/);
+  assert.match(res.content[0].text, /dateFrom не может быть позже dateTo/);
   assert.equal(h.wire.length, 0);
 });
 
@@ -260,6 +260,6 @@ test("a date that is not a real calendar day is refused before any request", asy
   const h = wireHarness();
   const res = await h.tools.group_stats({ campaignId: 12, dateFrom: "2026-02-31", dateTo: "2026-03-01", groupIds: [101] });
   assert.equal(res.isError, true);
-  assert.match(res.content[0].text, /real calendar dates/);
+  assert.match(res.content[0].text, /существующими календарными датами/);
   assert.equal(h.wire.length, 0);
 });

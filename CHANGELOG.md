@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   model: what this API is and is not, what it cannot do, and the quotas, retry rules and misleading
   failures that should change how it is used. That knowledge previously lived only in the README,
   which a model never reads.
+- Full Russian localization of everything the user sees: tool and parameter descriptions, error
+  messages, the `initialize` briefing, README and `docs/TOOLS.md`. Tool, parameter, response-field
+  and enum names, and environment variables, stay in Latin script.
 
 ## [1.0.1] — 2026-08-11
 

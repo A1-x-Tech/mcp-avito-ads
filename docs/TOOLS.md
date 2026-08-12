@@ -1,409 +1,422 @@
-# Tools
+# Инструменты
 
-25 tools over the Avito Ads API (`https://api.avito.ru/ads/`, or `/ads-sandbox/` in the sandbox).
+25 инструментов поверх API Авито Рекламы (`https://api.avito.ru/ads/`, в песочнице —
+`/ads-sandbox/`).
 
-Conventions that hold for every tool:
+Правила, общие для всех инструментов:
 
-- **The account is fixed.** Every path is `v1/account/{accountID}/...` and the id comes from
-  `AVITO_ADS_ACCOUNT_ID`. No tool takes an account id (`transfer_funds` / `transfer_bonus` take
-  only the *destination*).
-- **Every result is `{data, apiPointBalance}`**, serialized as compact JSON. `apiPointBalance` is
-  the `Api-Point-Balance` header — the weekly points left, refilled Mondays 00:00 UTC — or `null`
-  when the API did not send it. Errors come back as `isError: true` with the message text; an API
-  failure also reports `Retry-After` (as the server sent it, uncapped) and the point balance the
-  call failed with, which is what makes a 429 actionable.
-- **List tools** are POST endpoints taking `{filter, limit, page}`; `limit` is 1..100 (default 20),
-  `page` is 1-based (default 1). They return `{total, items, page, limit, hasNextPage}`.
-- **Statistics tools** take an inclusive `dateFrom`/`dateTo` pair in `YYYY-MM-DD`, at most **100
-  days** apart. The range is validated before the request, so a bad one costs no points.
-- Money is in rubles. `budget`, `price` and transfer `amount` have a minimum of 1.
+- **Аккаунт зафиксирован.** Каждый путь имеет вид `v1/account/{accountID}/...`, id берётся из
+  `AVITO_ADS_ACCOUNT_ID`. Ни один инструмент не принимает id аккаунта (`transfer_funds` /
+  `transfer_bonus` принимают только *получателя*).
+- **Любой результат — `{data, apiPointBalance}`**, сериализованный компактным JSON.
+  `apiPointBalance` — это заголовок `Api-Point-Balance`: остаток недельных баллов, которые
+  пополняются по понедельникам в 00:00 UTC, или `null`, если API его не прислал. Ошибки приходят
+  как `isError: true` с текстом сообщения; при ошибке API добавляются ещё `Retry-After` (как его
+  прислал сервер, без ограничения сверху) и остаток баллов, с которым вызов не прошёл, — благодаря
+  этому на 429 можно осмысленно отреагировать.
+- **Списочные инструменты** — это POST-эндпоинты с телом `{filter, limit, page}`; `limit` — от 1
+  до 100 (по умолчанию 20), `page` нумеруется с 1 (по умолчанию 1). Возвращают
+  `{total, items, page, limit, hasNextPage}`.
+- **Инструменты статистики** принимают пару `dateFrom`/`dateTo` в формате `YYYY-MM-DD`,
+  включительно, с интервалом не больше **100 дней**. Диапазон проверяется до запроса, поэтому
+  неверный не стоит баллов.
+- Деньги — в рублях. Минимум для `budget`, `price` и `amount` при переводе — 1.
 
-## Account
+## Аккаунт
 
 ### `get_account`
 
-Legal details of the configured ad account. **Inputs:** none.
-**Output:** the account record — `inn`, `kpp`, `ogrn`, `shortName`, `longName`, `legalAddress`,
-`actualAddress` and the contact / manager blocks. No money figures (see `get_balance`).
+Юридические реквизиты настроенного рекламного аккаунта. **Параметры:** нет.
+**Ответ:** запись аккаунта — `inn`, `kpp`, `ogrn`, `shortName`, `longName`, `legalAddress`,
+`actualAddress` и блоки контакта и менеджера. Денежных сумм нет (см. `get_balance`).
 `GET v1/account/{accountID}`.
 
 ### `get_balance`
 
-Current balance of the configured account, as a snapshot (not a history).
-**Inputs:** none. **Output:** `{balance, bonusBalance}` — real rubles and bonus rubles, which are
-spendable on ads only. `GET v1/account/{accountID}/balance`.
+Текущий баланс настроенного аккаунта — срез на момент вызова, а не история.
+**Параметры:** нет. **Ответ:** `{balance, bonusBalance}` — настоящие рубли и бонусные, которые
+можно потратить только на рекламу. `GET v1/account/{accountID}/balance`.
 
 ### `create_sandbox_account`
 
-**Sandbox only** — creates a test advertiser account. This server refuses the call unless
-`AVITO_ADS_ENVIRONMENT=sandbox`, and the refusal costs no API point; the endpoint posts to the
-*configured* account's path, so it is not something to try against production. The running server
-keeps using `AVITO_ADS_ACCOUNT_ID`: the new id is not adopted.
+**Только в песочнице** — создаёт тестовый аккаунт рекламодателя. Сервер отклоняет вызов, если
+`AVITO_ADS_ENVIRONMENT` не равен `sandbox`, и отказ не стоит ни одного балла API; эндпоинт
+обращается к пути *настроенного* аккаунта, так что пробовать его на продакшене не стоит.
+Запущенный сервер продолжает работать с `AVITO_ADS_ACCOUNT_ID`: новый id не подхватывается.
 
-**You get one shot.** A second call answers `403 нельзя создать второй аккаунт в песочнице` — the
-sandbox allows exactly one account per key. The test campaigns, groups and creatives that make the
-sandbox useful are generated *at creation time*, and only if the account already has a valid
-contract; otherwise the account is still created, but with the warning `не удалось создать тестовые
-кампании, группы и креативы: актуальный договор аккаунта не найден`, and registering a contract
-afterwards does not backfill them.
+**Попытка одна.** Второй вызов отвечает `403 нельзя создать второй аккаунт в песочнице` —
+песочница разрешает ровно один аккаунт на ключ. Тестовые кампании, группы и креативы, ради которых
+песочница и нужна, создаются *в момент создания аккаунта* и только если у аккаунта уже есть
+действующий договор; иначе аккаунт всё равно создаётся, но с предупреждением `не удалось создать
+тестовые кампании, группы и креативы: актуальный договор аккаунта не найден`, и регистрация
+договора задним числом их не добавит.
 
-Field formats are validated server-side and rejections are strict: `inn` and `ogrn` are
-checksum-verified, addresses must look like `127015, г. Москва, ул. Лесная, д. 7`, and the phone
-inside `contact` like `+71234567890`.
+Форматы полей проверяются на стороне API, и отказы строгие: у `inn` и `ogrn` сверяется контрольная
+сумма, адрес должен выглядеть как `127015, г. Москва, ул. Лесная, д. 7`, а телефон внутри
+`contact` — как `+71234567890`.
 
-| Input | Type | Required | Notes |
+| Параметр | Тип | Обяз. | Примечания |
 |---|---|---|---|
-| `inn` | string | yes | 10 digits for a company, 12 for a sole proprietor. |
-| `shortName` | string | yes | Short legal name. |
-| `longName` | string | yes | Full legal name. |
-| `ogrn` | string | yes | OGRN (company) / OGRNIP (sole trader). |
-| `legalAddress` | string | yes | Registered address. |
-| `actualAddress` | string | yes | Postal address; may repeat `legalAddress`. |
-| `contact` | object | yes | Non-empty; keys are `name` / `email` / `phone`, passed through as-is. The API validates the phone inside it. |
-| `kpp` | string | no | Companies (`ul`) only. |
-| `legalType` | `ul` \| `ip` | no | Company or sole proprietor. |
+| `inn` | string | да | 10 цифр для юрлица, 12 для ИП. |
+| `shortName` | string | да | Краткое юридическое наименование. |
+| `longName` | string | да | Полное юридическое наименование. |
+| `ogrn` | string | да | ОГРН (юрлицо) / ОГРНИП (ИП). |
+| `legalAddress` | string | да | Юридический адрес. |
+| `actualAddress` | string | да | Фактический адрес; может повторять `legalAddress`. |
+| `contact` | object | да | Непустой; ключи — `name` / `email` / `phone`, передаются как есть. Телефон внутри проверяет API. |
+| `kpp` | string | нет | Только для юрлиц (`ul`). |
+| `legalType` | `ul` \| `ip` | нет | Юрлицо или ИП. |
 
-**Output:** the created account, including its `accountID`. `POST v1/account/{accountID}`.
+**Ответ:** созданный аккаунт вместе с его `accountID`. `POST v1/account/{accountID}`.
 
-## Child accounts and money
+## Дочерние аккаунты и деньги
 
 ### `list_child_accounts`
 
-Child (sub-)accounts of the configured agency account. **Inputs:** none — no paging, no filter.
-**Output:** an array of `{account: {id, shortName}, contract}`. Balances are not included.
+Дочерние аккаунты (субаккаунты) настроенного агентского аккаунта. **Параметры:** нет — ни
+постраничной выдачи, ни фильтров.
+**Ответ:** массив `{account: {id, shortName}, contract}`. Балансов в нём нет.
 `GET v1/account/{accountID}/children`.
 
 ### `list_child_accounts_with_balances`
 
-The same list plus each child's `{balance, bonusBalance}`. **Inputs:** none. Use it to see which
-child is out of money before a transfer, and to verify one landed.
+Тот же список плюс `{balance, bonusBalance}` каждого дочернего аккаунта. **Параметры:** нет.
+Годится, чтобы перед переводом увидеть, у кого кончились деньги, и чтобы убедиться, что перевод
+дошёл.
 `GET v1/account/{accountID}/children-with-balances`.
 
 ### `create_child_account`
 
-Creates a **non-payer** child account under the configured agency account. Non-payer means it
-cannot top itself up — fund it with `transfer_funds`.
+Создаёт дочерний аккаунт-**неплательщик** под настроенным агентским аккаунтом. Неплательщик —
+значит не может пополнить себя сам: деньги заводятся в него через `transfer_funds`.
 
-| Input | Type | Required | Notes |
+| Параметр | Тип | Обяз. | Примечания |
 |---|---|---|---|
-| `shortName` | string | yes | Display name of the new account. |
-| `isSelfAdvertisingEnabled` | boolean | yes | Whether the child may advertise its own goods and services. |
+| `shortName` | string | да | Отображаемое имя нового аккаунта. |
+| `isSelfAdvertisingEnabled` | boolean | да | Может ли дочерний аккаунт рекламировать собственные товары и услуги. |
 
-**Output:** `{accountID, clientKey, clientSecret}` — the child's own API credentials, handed out
-**only here**; store them immediately, they cannot be re-read.
+**Ответ:** `{accountID, clientKey, clientSecret}` — собственные доступы дочернего аккаунта к API,
+выдаются **только здесь**; сохраните их сразу — повторно прочитать нельзя.
 `POST v1/account/{accountID}/create-nonpayer-child-account`.
 
 ### `transfer_funds`
 
-Moves **real money** out of the configured account into another one (normally a child).
-Destructive: no undo, no cancel, no transfer log.
+Переводит **настоящие деньги** с настроенного аккаунта на другой (обычно дочерний). Необратимо:
+отменить и откатить нельзя, журнала переводов нет.
 
-| Input | Type | Required | Notes |
+| Параметр | Тип | Обяз. | Примечания |
 |---|---|---|---|
-| `accountIdTo` | integer | yes | Destination account id. The sender is always the configured account. |
-| `amount` | number | yes | Rubles, minimum 1. |
+| `accountIdTo` | integer | да | Id аккаунта-получателя. Отправитель — всегда настроенный аккаунт. |
+| `amount` | number | да | Рубли, минимум 1. |
 
-**Output:** an empty data object on success — treat any non-error response as done and never
-repeat the call. After a network or server error the outcome is unknown: check
-`list_child_accounts_with_balances` before retrying. `POST v1/account/{accountID}/funds-transfer`.
+**Ответ:** при успехе — пустой объект данных; любой ответ без ошибки означает, что перевод
+выполнен, и повторять вызов нельзя. После сетевой ошибки или ошибки сервера результат неизвестен:
+перед повтором проверьте `list_child_accounts_with_balances`.
+`POST v1/account/{accountID}/funds-transfer`.
 
 ### `transfer_bonus`
 
-Same as `transfer_funds` but moves bonus rubles (`bonusBalance` — promotional funds that buy ads
-and cannot be withdrawn as cash). Inputs `accountIdTo`, `amount` (minimum 1).
+То же, что `transfer_funds`, но переводит бонусные рубли (`bonusBalance` — промо-средства, которые
+тратятся на рекламу и не выводятся деньгами). Параметры: `accountIdTo`, `amount` (минимум 1).
 `POST v1/account/{accountID}/bonus-transfer`.
 
-## ORD: advertisers and contracts
+## ОРД: рекламодатели и договоры
 
-Russian ad-marking law requires every campaign to name a registered advertiser and the contract it
-runs under. Both entities are **append-only** here — no edit, no delete.
+Закон о маркировке рекламы требует, чтобы у каждой кампании были указаны зарегистрированный
+рекламодатель и договор, по которому она идёт. Обе сущности здесь работают **только на
+добавление** — ни изменения, ни удаления.
 
 ### `create_advertiser`
 
-Registers an advertiser (an ORD counterparty).
+Регистрирует рекламодателя (контрагента ОРД).
 
-| Input | Type | Required | Notes |
+| Параметр | Тип | Обяз. | Примечания |
 |---|---|---|---|
-| `inn` | string | yes | 10 digits for `ul`, 12 for `ip`. |
-| `shortName` / `longName` | string | yes | Legal names. |
-| `ogrn` | string | yes | OGRN (company) / OGRNIP (sole trader). |
-| `legalAddress` / `actualAddress` | string | yes | Registered and postal address. |
-| `legalRole` | `rd` \| `ra` \| `rr` | yes | Advertiser / agency / distributor. |
-| `legalType` | `ul` \| `ip` | yes | Company / sole trader. |
-| `kpp` | string | no | Companies (`ul`) only. |
+| `inn` | string | да | 10 цифр для `ul`, 12 для `ip`. |
+| `shortName` / `longName` | string | да | Юридические наименования. |
+| `ogrn` | string | да | ОГРН (юрлицо) / ОГРНИП (ИП). |
+| `legalAddress` / `actualAddress` | string | да | Юридический и фактический адреса. |
+| `legalRole` | `rd` \| `ra` \| `rr` | да | Рекламодатель / рекламное агентство / рекламораспространитель. |
+| `legalType` | `ul` \| `ip` | да | Юрлицо / ИП. |
+| `kpp` | string | нет | Только для юрлиц (`ul`). |
 
-**Output:** `{id}` — the id campaigns and contracts reference.
+**Ответ:** `{id}` — на него ссылаются кампании и договоры.
 `POST v1/account/{accountID}/create-advertiser`.
 
 ### `list_advertisers`
 
-One page of registered advertisers. There is no free-text search — match on names yourself.
+Одна страница зарегистрированных рекламодателей. Полнотекстового поиска нет — сопоставлять по
+названиям придётся самостоятельно.
 
-| Input | Type | Notes |
+| Параметр | Тип | Примечания |
 |---|---|---|
-| `filter.ids` | integer[] | Only these advertiser ids. |
-| `filter.inns` | string[] | Only these taxpayer numbers. |
-| `filter.roles` | (`rd`\|`ra`\|`rr`)[] | Only these ORD roles. |
-| `limit` / `page` | integer | 1..100 (default 20) / 1-based. |
+| `filter.ids` | integer[] | Только эти id рекламодателей. |
+| `filter.inns` | string[] | Только эти ИНН. |
+| `filter.roles` | (`rd`\|`ra`\|`rr`)[] | Только эти роли ОРД. |
+| `limit` / `page` | integer | 1..100 (по умолчанию 20) / нумерация с 1. |
 
-Unknown filter keys pass through untouched. **Output:** a page of items carrying `id`,
+Неизвестные ключи фильтра передаются как есть. **Ответ:** страница записей с полями `id`,
 `shortName`, `longName`, `inn`, `ogrn`, `kpp`, `legalAddress`, `actualAddress`, `legalType`,
 `legalRole`. `POST v1/account/{accountID}/advertisers`.
 
 ### `create_contract`
 
-Registers an ORD contract between the account and an advertiser. Which fields are mandatory
-depends on `type`; the rules are enforced before the request, so a wrong combination costs no
-points:
+Регистрирует договор ОРД между аккаунтом и рекламодателем. Набор обязательных полей зависит от
+`type`; правила проверяются до запроса, поэтому неверная комбинация не стоит баллов:
 
-| `type` | Requires | Rejects |
+| `type` | Требует | Не допускает |
 |---|---|---|
 | `service` | `subject`, `isReportingRequired`, `date`, `number` | `cid` |
-| `intermediary` | the above plus `object`, `isFundsAllocationToPrincipal` | `cid` |
+| `intermediary` | то же плюс `object`, `isFundsAllocationToPrincipal` | `cid` |
 | `external` | `cid` | `parentId` |
 
-| Input | Type | Notes |
+| Параметр | Тип | Примечания |
 |---|---|---|
-| `advertiserId` | integer | Required. The client, from `list_advertisers`. |
-| `type` | `service` \| `intermediary` \| `external` | Required. |
-| `counterpartyType` | `direct_with_advertiser` \| `advertiser_intermediary` | Required. Sent as the API's `description` field. |
-| `subject` | `org-distribution` \| `mediation` \| `distribution` \| `representation` \| `other` | Per the table above. |
-| `object` | `distribution` \| `conclude` \| `commercial` \| `other` | The contract action. |
-| `cid` | string | External contract id (ERID-side). |
+| `advertiserId` | integer | Обязательный. Заказчик, из `list_advertisers`. |
+| `type` | `service` \| `intermediary` \| `external` | Обязательный. |
+| `counterpartyType` | `direct_with_advertiser` \| `advertiser_intermediary` | Обязательный. Уходит в поле API `description`. |
+| `subject` | `org-distribution` \| `mediation` \| `distribution` \| `representation` \| `other` | По таблице выше. |
+| `object` | `distribution` \| `conclude` \| `commercial` \| `other` | Действие по договору. |
+| `cid` | string | Внешний id договора (на стороне ERID). |
 | `date` | string | `YYYY-MM-DD`. |
-| `number` | string | Contract number. |
-| `isReportingRequired` | boolean | Acts / reports required. |
-| `isFundsAllocationToPrincipal` | boolean | Funds allocated to the principal. |
-| `parentId` | integer | Set it to register an **additional agreement**; then `intermediary` must be omitted. |
-| `intermediary` | object | Contractor's legal details (`inn` required; `shortName`, `longName`, `ogrn`, `kpp`, `legalAddress`, `actualAddress`, `legalType`, plus any extra keys). Required unless `parentId` is set. |
+| `number` | string | Номер договора. |
+| `isReportingRequired` | boolean | Нужны акты / отчёты. |
+| `isFundsAllocationToPrincipal` | boolean | Средства распределяются принципалу. |
+| `parentId` | integer | Задаётся, чтобы зарегистрировать **дополнительное соглашение**; тогда `intermediary` указывать нельзя. |
+| `intermediary` | object | Реквизиты исполнителя (`inn` обязателен; `shortName`, `longName`, `ogrn`, `kpp`, `legalAddress`, `actualAddress`, `legalType` и любые дополнительные ключи). Обязателен, если не задан `parentId`. |
 
-**Output:** `{id}`. `POST v1/account/{accountID}/create-contract`.
+**Ответ:** `{id}`. `POST v1/account/{accountID}/create-contract`.
 
 ### `list_contracts`
 
-One page of registered contracts.
+Одна страница зарегистрированных договоров.
 
-| Input | Type | Notes |
+| Параметр | Тип | Примечания |
 |---|---|---|
-| `filter.ids` | integer[] | Only these contract ids. |
-| `filter.numbers` | string[] | Only these contract numbers. |
-| `filter.clients` | integer[] | Only contracts whose client is one of these advertiser ids. |
-| `filter.contractors` | integer[] | Only these contractor (intermediary) ids. |
-| `limit` / `page` | integer | 1..100 (default 20) / 1-based. |
+| `filter.ids` | integer[] | Только эти id договоров. |
+| `filter.numbers` | string[] | Только эти номера договоров. |
+| `filter.clients` | integer[] | Только договоры, заказчик которых — один из этих рекламодателей (по id). |
+| `filter.contractors` | integer[] | Только эти id исполнителей (посредников). |
+| `limit` / `page` | integer | 1..100 (по умолчанию 20) / нумерация с 1. |
 
-**Output:** a page of items carrying `id`, `type`, `number`, `date`, `subject`, `object`, `cid`,
-`description` (the counterparty type), `parentId` on additional agreements, and the client /
-contractor legal details. `POST v1/account/{accountID}/contracts`.
+**Ответ:** страница записей с полями `id`, `type`, `number`, `date`, `subject`, `object`, `cid`,
+`description` (тип контрагента), `parentId` у дополнительных соглашений и реквизитами заказчика и
+исполнителя. `POST v1/account/{accountID}/contracts`.
 
-## Campaigns, groups, creatives
+## Кампании, группы, креативы
 
-Read-only, plus two writes on an ad group. Campaigns, groups and creatives cannot be created,
-edited, paused, resumed, archived or deleted, and targeting is not exposed.
+Только чтение плюс две записи на уровне группы объявлений. Кампании, группы и креативы нельзя
+создавать, редактировать, ставить на паузу, возобновлять, архивировать и удалять, а таргетинги API
+не отдаёт.
 
-All three list tools share the same shape: named filter fields (all AND-ed, each keeping only the
-values it names), a raw `filter` escape hatch merged underneath them (named fields win), plus
-`limit` and `page`. The id lists are renamed onto their wire spelling (`campaignIds` →
-`campaignIDs`, `groupIds` → `groupIDs`, `contractIds` → `contractIDs`, `additionalAgreementIds` →
-`additionalAgreementIDs`). Date-range filters are `{from, to}` with both ends `YYYY-MM-DD`.
+У всех трёх списочных инструментов одинаковая форма: именованные поля фильтра (объединяются по И,
+каждое оставляет только перечисленные в нём значения), сырой `filter` для всего остального — он
+подмешивается под них (именованные поля важнее), плюс `limit` и `page`. Списки id переименовываются
+в то написание, которое ждёт API (`campaignIds` → `campaignIDs`, `groupIds` → `groupIDs`,
+`contractIds` → `contractIDs`, `additionalAgreementIds` → `additionalAgreementIDs`).
+Фильтры по датам — `{from, to}`, оба конца в формате `YYYY-MM-DD`.
 
 ### `list_campaigns`
 
-| Input | Type | Notes |
+| Параметр | Тип | Примечания |
 |---|---|---|
-| `ids` | integer[] | Campaign ids to keep. |
+| `ids` | integer[] | Оставить только эти id кампаний. |
 | `statuses` | string[] | `draft`, `in_moderation`, `moderation_failed`, `partial_moderation`, `active`, `paused`, `stopped`, `finished`, `archived`. |
 | `campaignTypes` | (`textImage`\|`HTML`\|`video`)[] | |
 | `paymentModels` | (`CPM`\|`CPC`)[] | |
-| `advertisers` / `managers` | integer[] | Advertiser / manager (account user) ids. |
-| `contractIds` / `additionalAgreementIds` | integer[] | ORD document ids. |
-| `createdAt` | `{from, to}` | Creation date range. |
-| `timeFrame` | `{from, to}` | Flight window range. |
-| `filter` | object | Extra filter keys in API spelling. |
-| `limit` / `page` | integer | 1..100 (default 20) / 1-based. |
+| `advertisers` / `managers` | integer[] | Id рекламодателей / менеджеров (пользователей аккаунта). |
+| `contractIds` / `additionalAgreementIds` | integer[] | Id документов ОРД. |
+| `createdAt` | `{from, to}` | Диапазон дат создания. |
+| `timeFrame` | `{from, to}` | Диапазон сроков размещения. |
+| `filter` | object | Дополнительные ключи фильтра в написании API. |
+| `limit` / `page` | integer | 1..100 (по умолчанию 20) / нумерация с 1. |
 
-**Output:** a page of campaigns with `id`, `name`, `status`, `budget`, `paymentModel`,
-`campaignType`, `startDate` / `endDate`, `advertiserId`, `contractId`, `managerID` and timestamps.
-`POST v1/account/{accountID}/campaigns`.
+**Ответ:** страница кампаний с полями `id`, `name`, `status`, `budget`, `paymentModel`,
+`campaignType`, `startDate` / `endDate`, `advertiserId`, `contractId`, `managerID` и отметками
+времени. `POST v1/account/{accountID}/campaigns`.
 
 ### `list_groups`
 
-The ad group is the level that holds the money.
+Группа объявлений — это уровень, на котором лежат деньги.
 
-| Input | Type | Notes |
+| Параметр | Тип | Примечания |
 |---|---|---|
-| `ids` | integer[] | Ad group ids to keep. |
-| `campaignIds` | integer[] | Groups of these campaigns. |
+| `ids` | integer[] | Оставить только эти id групп объявлений. |
+| `campaignIds` | integer[] | Группы этих кампаний. |
 | `statuses` | string[] | `draft`, `in_moderation`, `moderation_failed`, `will_launch_soon`, `active`, `will_stop_soon`, `pausing`, `paused`, `unpausing`, `stopped`, `finished`, `archived`. |
 | `paymentModels` | (`CPM`\|`CPC`)[] | |
-| `paces` | string[] | Budget pacing modes; free-form — the SDK documents no fixed vocabulary. |
+| `paces` | string[] | Режимы распределения бюджета; произвольные строки — фиксированного словаря в SDK нет. |
 | `advertisers` / `managers` | integer[] | |
-| `timeFrame` | `{from, to}` | Flight window range. |
-| `filter` | object | Extra filter keys. |
+| `timeFrame` | `{from, to}` | Диапазон сроков размещения. |
+| `filter` | object | Дополнительные ключи фильтра. |
 | `limit` / `page` | integer | |
 
-**Output:** a page of groups with `id`, `name`, `campaignID`, `status`, `budget` and `price` (the
-bid) in rubles, `paymentModel`, `campaignType`, `advertiserID`, `haveCreative` and timestamps.
-`POST v1/account/{accountID}/groups`.
+**Ответ:** страница групп с полями `id`, `name`, `campaignID`, `status`, `budget` и `price`
+(ставка) в рублях, `paymentModel`, `campaignType`, `advertiserID`, `haveCreative` и отметками
+времени. `POST v1/account/{accountID}/groups`.
 
 ### `list_creatives`
 
-| Input | Type | Notes |
+| Параметр | Тип | Примечания |
 |---|---|---|
-| `ids` | integer[] | Creative ids to keep. |
-| `groupIds` / `campaignIds` | integer[] | Creatives of these groups / campaigns. |
+| `ids` | integer[] | Оставить только эти id креативов. |
+| `groupIds` / `campaignIds` | integer[] | Креативы этих групп / кампаний. |
 | `statuses` | string[] | `draft`, `ready_for_moderation`, `in_moderation`, `moderation_failed`, `erir_registration`, `active`, `paused`, `stopped`, `finished`, `archived`. |
 | `campaignTypes` | (`textImage`\|`HTML`\|`video`)[] | |
 | `paymentModels` | (`CPM`\|`CPC`)[] | |
 | `advertisers` / `managers` | integer[] | |
-| `timeFrame` | `{from, to}` | Flight window range. |
-| `filter` | object | Extra filter keys. |
+| `timeFrame` | `{from, to}` | Диапазон сроков размещения. |
+| `filter` | object | Дополнительные ключи фильтра. |
 | `limit` / `page` | integer | |
 
-**Output:** a page of creatives with `id`, `name`, `title`, `description`, `buttonText`, `link`,
-`status`, `groupID`, `campaignID`, `advertiserID`, `paymentModel`, `campaignType` and `legalInfo`
-(the ad-registry / ERID data). `POST v1/account/{accountID}/creatives`.
+**Ответ:** страница креативов с полями `id`, `name`, `title`, `description`, `buttonText`, `link`,
+`status`, `groupID`, `campaignID`, `advertiserID`, `paymentModel`, `campaignType` и `legalInfo`
+(данные реестра рекламы / ERID). `POST v1/account/{accountID}/creatives`.
 
 ### `change_group_budget`
 
-Sets one ad group's budget. The value **replaces** the current budget rather than adding to it, so
-repeating the call is safe. Only groups on manual bid management accept it.
+Задаёт бюджет одной группы объявлений. Значение **заменяет** текущий бюджет, а не прибавляется к
+нему, поэтому повторный вызов безопасен. Принимают его только группы с ручным управлением ставками.
 
-| Input | Type | Notes |
+| Параметр | Тип | Примечания |
 |---|---|---|
-| `groupId` | integer | From `list_groups`. |
-| `budget` | number | Rubles, at least 1. |
+| `groupId` | integer | Из `list_groups`. |
+| `budget` | number | Рубли, не меньше 1. |
 
-**Output:** the API's acknowledgement. `POST v1/account/{accountID}/group/{groupID}/change-budget`.
+**Ответ:** подтверждение от API. `POST v1/account/{accountID}/group/{groupID}/change-budget`.
 
 ### `change_group_price`
 
-Sets one ad group's bid (the API calls it `price`). The unit follows the group's `paymentModel`:
-rubles per 1000 impressions for CPM, rubles per click for CPC. Replaces, does not add. Manual bid
-management only.
+Задаёт ставку одной группы объявлений (в API она называется `price`). Единица зависит от
+`paymentModel` группы: рубли за 1000 показов при CPM, рубли за клик при CPC. Заменяет, а не
+прибавляет. Только для групп с ручным управлением ставками.
 
-| Input | Type | Notes |
+| Параметр | Тип | Примечания |
 |---|---|---|
-| `groupId` | integer | From `list_groups`. |
-| `price` | number | Rubles, at least 1. |
+| `groupId` | integer | Из `list_groups`. |
+| `price` | number | Рубли, не меньше 1. |
 
-**Output:** the API's acknowledgement. `POST v1/account/{accountID}/group/{groupID}/change-price`.
+**Ответ:** подтверждение от API. `POST v1/account/{accountID}/group/{groupID}/change-price`.
 
-## Statistics
+## Статистика
 
-Metrics in every row: `views` (impressions), `clicks`, `ctr`, `spend`, `spendBonus`, `cpm`, `cpc`
-and, for video campaigns, `videoViews25/50/75/100`, `q25/q50/q75`, `vtr`. Money is in rubles;
-rates pass through exactly as the API reports them. Each entity carries `data[]` (one row per day,
-stamped with `timestamp`) and `totalData` (the period aggregate). There is no sub-day granularity
-and no aggregation across campaigns.
+Метрики в каждой строке: `views` (показы), `clicks`, `ctr`, `spend`, `spendBonus`, `cpm`, `cpc`, а
+для видеокампаний ещё `videoViews25/50/75/100`, `q25/q50/q75`, `vtr`. Деньги — в рублях;
+коэффициенты передаются ровно так, как их отдаёт API. У каждой сущности есть `data[]` (по строке
+на день, с отметкой `timestamp`) и `totalData` (итог за период). Разбивки мельче дня нет, как и
+агрегации по нескольким кампаниям.
 
 ### `campaign_stats`
 
-Statistics for **one** campaign with its per-group and per-creative breakdowns.
+Статистика **одной** кампании вместе с разбивкой по группам и по креативам.
 
-| Input | Type | Notes |
+| Параметр | Тип | Примечания |
 |---|---|---|
-| `campaignId` | integer | From `list_campaigns`. |
-| `dateFrom` / `dateTo` | `YYYY-MM-DD` | Inclusive; at most 100 days apart. |
+| `campaignId` | integer | Из `list_campaigns`. |
+| `dateFrom` / `dateTo` | `YYYY-MM-DD` | Включительно; интервал не больше 100 дней. |
 
-**Output:** `{campaign, groups[], creatives[]}`.
+**Ответ:** `{campaign, groups[], creatives[]}`.
 `POST v1/account/{accountID}/campaigns/{campaignID}/stats`.
 
 ### `group_stats`
 
-Per-group statistics for the groups you name in one campaign — a flat array of
-`{id, name, paymentModel, campaignType, data[], totalData}`, with no campaign-level totals. This
-tool narrows, it does not enumerate: `campaign_stats` already carries the breakdown for every
-group. The id list is sent as the API's `groupIDs` and is passed through exactly as given — the
-SDK makes it a required argument and documents no meaning for an empty one.
+Статистика по перечисленным группам одной кампании — плоский массив
+`{id, name, paymentModel, campaignType, data[], totalData}`, без итогов по кампании. Инструмент
+сужает выборку, а не перечисляет всё: разбивка по всем группам уже есть в `campaign_stats`. Список
+id уходит в API как `groupIDs` и передаётся ровно в том виде, в каком задан, — в SDK этот аргумент
+обязателен, а смысл пустого списка нигде не описан.
 
-| Input | Type | Notes |
+| Параметр | Тип | Примечания |
 |---|---|---|
-| `campaignId` | integer | Required. |
-| `dateFrom` / `dateTo` | `YYYY-MM-DD` | Required, inclusive, ≤ 100 days. |
-| `groupIds` | integer[] | Required. The groups to report on; use `campaign_stats` for all of them. |
+| `campaignId` | integer | Обязательный. |
+| `dateFrom` / `dateTo` | `YYYY-MM-DD` | Обязательные, включительно, ≤ 100 дней. |
+| `groupIds` | integer[] | Обязательный. Группы, по которым нужен отчёт; для всех сразу — `campaign_stats`. |
 
 `POST v1/account/{accountID}/campaigns/{campaignID}/groups/stats`.
 
 ### `creative_stats`
 
-Per-creative statistics for the creatives you name in one campaign — a flat array of
-`{id, name, groupId, paymentModel, campaignType, data[], totalData}`. Same rule as `group_stats`:
-the id list is required and passed through as the API's `creativeIDs`; `campaign_stats` is the way
-to get every creative of a campaign.
+Статистика по перечисленным креативам одной кампании — плоский массив
+`{id, name, groupId, paymentModel, campaignType, data[], totalData}`. Правило то же, что у
+`group_stats`: список id обязателен и уходит в API как `creativeIDs`; чтобы получить все креативы
+кампании, нужен `campaign_stats`.
 
-| Input | Type | Notes |
+| Параметр | Тип | Примечания |
 |---|---|---|
-| `campaignId` | integer | Required. |
-| `dateFrom` / `dateTo` | `YYYY-MM-DD` | Required, inclusive, ≤ 100 days. |
-| `creativeIds` | integer[] | Required. The creatives to report on; use `campaign_stats` for all of them. |
+| `campaignId` | integer | Обязательный. |
+| `dateFrom` / `dateTo` | `YYYY-MM-DD` | Обязательные, включительно, ≤ 100 дней. |
+| `creativeIds` | integer[] | Обязательный. Креативы, по которым нужен отчёт; для всех сразу — `campaign_stats`. |
 
 `POST v1/account/{accountID}/campaigns/{campaignID}/creatives/stats`.
 
-## Users
+## Пользователи
 
-Scoped to the configured account — these tools cannot manage the users of a child account.
+Работают только с настроенным аккаунтом — пользователями дочернего аккаунта эти инструменты не
+управляют.
 
 ### `list_users`
 
-**Inputs:** none. **Output:** one `{id, role, hasLoggedIn}` per user, where `role` is `admin` or
-`viewer` and `hasLoggedIn` says whether the invited person has ever signed in.
+**Параметры:** нет. **Ответ:** по одной записи `{id, role, hasLoggedIn}` на пользователя, где
+`role` — `admin` или `viewer`, а `hasLoggedIn` показывает, заходил ли приглашённый хоть раз.
 `GET v1/account/{accountID}/users`.
 
 ### `add_user`
 
-Grants an existing Avito user access. Cannot invite by email or phone and cannot create an Avito
-account; if the user already has access, use `set_user_role`.
+Выдаёт доступ существующему пользователю Авито. Пригласить по email или телефону нельзя, создать
+аккаунт Авито — тоже; если доступ у пользователя уже есть, нужен `set_user_role`.
 
-| Input | Type | Notes |
+| Параметр | Тип | Примечания |
 |---|---|---|
-| `userId` | integer | Numeric Avito user id. |
-| `role` | `admin` \| `viewer` | `admin` = full access (users, transfers, campaign edits); `viewer` = read-only. |
+| `userId` | integer | Числовой id пользователя Авито. |
+| `role` | `admin` \| `viewer` | `admin` — полный доступ (пользователи, переводы, правки кампаний); `viewer` — только чтение. |
 
 `POST v1/account/{accountID}/add-user`.
 
 ### `set_user_role`
 
-Changes the role of a user who already has access. Applying the role they already hold is a no-op.
-It neither grants nor revokes access. Inputs `userId`, `role`.
+Меняет роль пользователя, у которого уже есть доступ. Назначение той же роли, что и сейчас, ничего
+не меняет. Доступ при этом не выдаётся и не отзывается. Параметры: `userId`, `role`.
 `POST v1/account/{accountID}/set-user-role`.
 
 ### `delete_user`
 
-Revokes a user's access. Destructive: the only way back is `add_user` with an explicit role. It
-does not delete the person's Avito account, their campaigns or their spend history.
-**Input:** `userId`. `DELETE v1/account/{accountID}/delete-user/{userID}`.
+Отзывает доступ пользователя. Операция разрушительная: вернуть доступ можно только через
+`add_user` с явным указанием роли. Аккаунт Авито этого человека, его кампании и историю расходов
+инструмент не удаляет. **Параметр:** `userId`. `DELETE v1/account/{accountID}/delete-user/{userID}`.
 
-## Escape hatch
+## Универсальный запрос
 
 ### `raw_request`
 
-Calls any Avito Ads API path directly, for endpoints without a dedicated tool.
+Вызывает напрямую любой путь API Авито Рекламы — для эндпоинтов, у которых нет отдельного
+инструмента.
 
-| Input | Type | Notes |
+| Параметр | Тип | Примечания |
 |---|---|---|
-| `path` | string | Relative to the API base, e.g. `v1/account/{accountID}/groups`. The literal `{accountID}` placeholder is substituted with the configured account id. |
-| `method` | `GET` \| `POST` \| `DELETE` | Default `GET`. |
-| `body` | object | Sent as JSON. Rejected on `GET` — this API serves its filtered reads over POST. |
-| `confirmWrite` | boolean | Must be `true` for `POST` and `DELETE`, which this API also uses for list and statistics reads. |
+| `path` | string | Относительно корня API, например `v1/account/{accountID}/groups`. Подстановка `{accountID}` буквально заменяется на настроенный id аккаунта. |
+| `method` | `GET` \| `POST` \| `DELETE` | По умолчанию `GET`. |
+| `body` | object | Уходит как JSON. С `GET` не принимается — фильтруемые чтения этот API отдаёт по POST. |
+| `confirmWrite` | boolean | Должен быть `true` для `POST` и `DELETE`, которыми этот API отдаёт ещё и списки со статистикой. |
 
-A path that resolves to a foreign origin, or that climbs out of the API base (`../token`), is
-refused before any request goes out — the Bearer token cannot leak to another host. So is a path
-that addresses another account (`v1/account/999/funds-transfer`): the check runs on the resolved
-path, so `..` cannot dodge it, and the account id stays what `AVITO_ADS_ACCOUNT_ID` says it is.
-The tool is annotated **destructive** because it can reach every write endpoint, funds transfer
-and `delete_user` included, with none of the client-side validation the dedicated tools apply —
-and its description says so, because that is the only text the model reads.
-**Output:** the raw response body plus `apiPointBalance`.
+Путь, который разрешается в чужой origin или вылезает за корень API (`../token`), отклоняется ещё
+до отправки запроса — Bearer-токен не утечёт на другой хост. Так же отклоняется путь к другому
+аккаунту (`v1/account/999/funds-transfer`): проверка идёт по уже разрешённому пути, поэтому `..`
+её не обойдёт, и id аккаунта остаётся тем, что задан в `AVITO_ADS_ACCOUNT_ID`. Инструмент помечен
+как **разрушительный** (destructive), потому что дотягивается до любого эндпоинта записи, включая
+перевод средств и `delete_user`, и делает это без клиентских проверок, которые есть у
+специализированных инструментов, — об этом сказано и в его описании, потому что только этот текст
+читает модель.
+**Ответ:** сырое тело ответа плюс `apiPointBalance`.
 
-## Environment variables
+## Переменные окружения
 
-| Variable | Required | Default | Description |
+| Переменная | Обяз. | По умолчанию | Описание |
 |---|---|---|---|
-| `AVITO_ADS_CLIENT_ID` | yes | — | OAuth2 client id (Client Key). |
-| `AVITO_ADS_CLIENT_SECRET` | yes | — | OAuth2 client secret. Treat as a password. |
-| `AVITO_ADS_ACCOUNT_ID` | yes | — | Ad account id, a positive integer (digits only). |
-| `AVITO_ADS_ENVIRONMENT` | no | `production` | `production` or `sandbox` (`ads` / `ads-sandbox` prefix). |
-| `AVITO_ADS_TIMEOUT_MS` | no | `30000` | Per-request timeout, ms; covers reading the body. |
-| `AVITO_ADS_MAX_RETRIES` | no | `4` | Retries on 429 (always) and on 5xx / network for reads. |
-| `AVITO_ADS_TOKEN_LEEWAY_SECONDS` | no | `60` | Refresh the token this long before expiry. |
-| `AVITO_ADS_API_BASE` | no | `https://api.avito.ru/ads/` | API root override; replaces the environment prefix. |
+| `AVITO_ADS_CLIENT_ID` | да | — | OAuth2 client id (Client Key). |
+| `AVITO_ADS_CLIENT_SECRET` | да | — | OAuth2 client secret. Относитесь к нему как к паролю. |
+| `AVITO_ADS_ACCOUNT_ID` | да | — | Id рекламного аккаунта, целое положительное число (только цифры). |
+| `AVITO_ADS_ENVIRONMENT` | нет | `production` | `production` или `sandbox` (префикс `ads` / `ads-sandbox`). |
+| `AVITO_ADS_TIMEOUT_MS` | нет | `30000` | Таймаут одного запроса, мс; включает чтение тела ответа. |
+| `AVITO_ADS_MAX_RETRIES` | нет | `4` | Повторы при 429 (всегда) и при 5xx / сетевых ошибках — для чтений. |
+| `AVITO_ADS_TOKEN_LEEWAY_SECONDS` | нет | `60` | За сколько секунд до истечения обновлять токен. |
+| `AVITO_ADS_API_BASE` | нет | `https://api.avito.ru/ads/` | Переопределение корня API; заменяет префикс окружения. |

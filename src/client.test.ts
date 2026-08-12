@@ -177,7 +177,7 @@ test("a failing token endpoint surfaces as an AvitoAdsError and is not cached", 
     return new Response("{}", { status: 200 });
   });
 
-  await assert.rejects(() => h.client.getBalance(), /OAuth2 token request failed: HTTP 403/);
+  await assert.rejects(() => h.client.getBalance(), /Запрос токена OAuth2 не удался: HTTP 403/);
   await h.client.getBalance(); // the failure was not cached, so a retry can succeed
   assert.equal(tokenCalls, 2);
 });
@@ -188,7 +188,7 @@ test("a token response without access_token is rejected", async () => {
       ? new Response(JSON.stringify({ expires_in: 60 }), { status: 200 })
       : new Response("{}", { status: 200 }),
   );
-  await assert.rejects(() => h.client.getBalance(), /no access_token/);
+  await assert.rejects(() => h.client.getBalance(), /нет access_token/);
 });
 
 test("the token endpoint follows the api base, so a mock server serves both", async () => {
@@ -368,7 +368,7 @@ test("a hanging request aborts and reports the timeout", async () => {
     { clientId: "c", clientSecret: "s", accountId: 1, environment: "production", apiBase: BASE, timeoutMs: 10, maxRetries: 0 },
     fetchImpl,
   );
-  await assert.rejects(() => client.getBalance(), /timed out after 10ms/);
+  await assert.rejects(() => client.getBalance(), /превысил тайм-аут 10 мс/);
 });
 
 test("request() rejects any path that escapes the API base and never fetches it", async () => {
@@ -384,7 +384,7 @@ test("request() rejects any path that escapes the API base and never fetches it"
     const h = okHarness();
     await assert.rejects(
       () => h.client.request("POST", path, {}),
-      /foreign origin|must stay under/,
+      /чужой origin|должен оставаться внутри/,
       `must reject ${JSON.stringify(path)}`,
     );
     assert.equal(h.apiCalls.length, 0, `must not fetch for ${JSON.stringify(path)}`);
@@ -405,7 +405,7 @@ test("request() refuses a path that addresses another account, however it is spe
     const h = okHarness();
     await assert.rejects(
       () => h.client.request("POST", path, {}),
-      /must address the configured account 777/,
+      /должен адресовать настроенный аккаунт 777/,
       `must reject ${JSON.stringify(path)}`,
     );
     assert.equal(h.apiCalls.length, 0, `must not fetch for ${JSON.stringify(path)}`);
@@ -654,13 +654,13 @@ async function rejectsWithoutFetching(run: (c: AvitoAdsClient) => Promise<unknow
 }
 
 test("budget, price and transfer amounts below 1 are rejected up front", async () => {
-  await rejectsWithoutFetching((c) => c.changeGroupBudget({ groupId: 1, budget: 0 }), /budget must be at least 1/);
-  await rejectsWithoutFetching((c) => c.changeGroupPrice({ groupId: 1, price: 0.5 }), /price must be at least 1/);
-  await rejectsWithoutFetching((c) => c.transferFunds({ accountIdTo: 2, amount: 0 }), /amount must be at least 1/);
-  await rejectsWithoutFetching((c) => c.transferBonus({ accountIdTo: 2, amount: -5 }), /amount must be at least 1/);
+  await rejectsWithoutFetching((c) => c.changeGroupBudget({ groupId: 1, budget: 0 }), /budget должен быть не меньше 1/);
+  await rejectsWithoutFetching((c) => c.changeGroupPrice({ groupId: 1, price: 0.5 }), /price должен быть не меньше 1/);
+  await rejectsWithoutFetching((c) => c.transferFunds({ accountIdTo: 2, amount: 0 }), /amount должен быть не меньше 1/);
+  await rejectsWithoutFetching((c) => c.transferBonus({ accountIdTo: 2, amount: -5 }), /amount должен быть не меньше 1/);
   await rejectsWithoutFetching(
     (c) => c.changeGroupBudget({ groupId: 1, budget: Number.NaN }),
-    /budget must be at least 1/,
+    /budget должен быть не меньше 1/,
   );
 });
 
@@ -669,12 +669,12 @@ test("statistics periods must be well-formed and at most 100 days", async () => 
     c.campaignStats({ campaignId: 1, dateFrom, dateTo });
   await rejectsWithoutFetching(period("01.01.2026", "2026-01-31"), /YYYY-MM-DD/);
   await rejectsWithoutFetching(period("2026-01-01", "31 Jan 2026"), /YYYY-MM-DD/);
-  await rejectsWithoutFetching(period("2026-02-31", "2026-03-01"), /real calendar dates/);
-  await rejectsWithoutFetching(period("2026-03-01", "2026-01-01"), /must not be later than/);
-  await rejectsWithoutFetching(period("2026-01-01", "2026-04-11"), /must not exceed 100 days/);
+  await rejectsWithoutFetching(period("2026-02-31", "2026-03-01"), /существующими календарными датами/);
+  await rejectsWithoutFetching(period("2026-03-01", "2026-01-01"), /не может быть позже/);
+  await rejectsWithoutFetching(period("2026-01-01", "2026-04-11"), /не может превышать 100 дней/);
   await rejectsWithoutFetching(
     (c) => c.groupStats({ campaignId: 1, dateFrom: "2026-01-01", dateTo: "2027-01-01", groupIds: [1] }),
-    /must not exceed 100 days/,
+    /не может превышать 100 дней/,
   );
   await rejectsWithoutFetching(
     (c) => c.creativeStats({ campaignId: 1, dateFrom: "bad", dateTo: "2026-01-02", creativeIds: [1] }),
@@ -690,11 +690,11 @@ test("statistics periods must be well-formed and at most 100 days", async () => 
 test("unknown user roles are rejected before the request", async () => {
   await rejectsWithoutFetching(
     (c) => c.addUser({ userId: 1, role: "owner" as never }),
-    /role must be one of admin, viewer/,
+    /role должен быть одним из: admin, viewer/,
   );
   await rejectsWithoutFetching(
     (c) => c.setUserRole({ userId: 1, role: "" as never }),
-    /role must be one of admin, viewer/,
+    /role должен быть одним из: admin, viewer/,
   );
 });
 
@@ -708,7 +708,7 @@ test("creating a sandbox account without contact details is rejected", async () 
     actualAddress: "a",
     contact: {},
   };
-  await rejectsWithoutFetching((c) => c.createSandboxAccount(input), /contact is required/);
+  await rejectsWithoutFetching((c) => c.createSandboxAccount(input), /требуется contact/);
 
   const h = okHarness({ accountID: 5 });
   const res = await h.client.createSandboxAccount({ ...input, contact: { email: "a@b.c" } });
@@ -719,7 +719,7 @@ test("creating a sandbox account without contact details is rejected", async () 
 test("createNonpayerChildAccount requires a name", async () => {
   await rejectsWithoutFetching(
     (c) => c.createNonpayerChildAccount({ shortName: "", isSelfAdvertisingEnabled: false }),
-    /shortName is required/,
+    /Требуется shortName/,
   );
 });
 
@@ -743,15 +743,15 @@ test("validateContractInput enforces the per-type rules", () => {
       return true;
     });
 
-  rejects({ ...base, number: undefined }, /requires subject, isReportingRequired, date and number/);
-  rejects({ ...base, cid: "X" }, /cannot carry cid/);
+  rejects({ ...base, number: undefined }, /требует subject, isReportingRequired, date и number/);
+  rejects({ ...base, cid: "X" }, /не может нести cid/);
   rejects({ ...base, date: "01.01.2026" }, /YYYY-MM-DD/);
-  rejects({ ...base, intermediary: undefined }, /intermediary .* is required unless parentId/);
-  rejects({ ...base, parentId: 9 }, /additional agreement .* cannot carry intermediary/);
+  rejects({ ...base, intermediary: undefined }, /intermediary .* обязателен, если не задан parentId/);
+  rejects({ ...base, parentId: 9 }, /Дополнительное соглашение .* не может нести реквизиты intermediary/);
   assert.doesNotThrow(() => validateContractInput({ ...base, parentId: 9, intermediary: undefined }));
 
   // intermediary contracts need object + isFundsAllocationToPrincipal on top
-  rejects({ ...base, type: "intermediary" }, /requires object/);
+  rejects({ ...base, type: "intermediary" }, /требует object/);
   assert.doesNotThrow(() =>
     validateContractInput({
       ...base,
@@ -763,15 +763,15 @@ test("validateContractInput enforces the per-type rules", () => {
 
   // external contracts need cid and reject parentId
   const external: ContractInput = { advertiserId: 1, type: "external", description: "advertiser_intermediary", intermediary: {} };
-  rejects(external, /requires cid/);
-  rejects({ ...external, cid: "C-1", parentId: 2 }, /cannot carry parentId/);
+  rejects(external, /требует cid/);
+  rejects({ ...external, cid: "C-1", parentId: 2 }, /не может нести parentId/);
   assert.doesNotThrow(() => validateContractInput({ ...external, cid: "C-1" }));
 });
 
 test("createContract validates before spending an API point, then posts the body", async () => {
   await rejectsWithoutFetching(
     (c) => c.createContract({ advertiserId: 1, type: "external", description: "direct_with_advertiser" }),
-    /requires cid/,
+    /требует cid/,
   );
 
   const h = okHarness({ id: 77 });

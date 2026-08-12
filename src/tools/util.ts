@@ -26,7 +26,7 @@ import {
 
 /** A calendar date, YYYY-MM-DD — the format every Avito Ads date field uses. */
 export const isoDate = () =>
-  z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be a date in YYYY-MM-DD format, e.g. 2026-01-31");
+  z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Дата должна быть в формате YYYY-MM-DD, например 2026-01-31");
 
 /** Page size of a list endpoint: 1..100 (the API's own bounds). */
 export const pageLimit = () => z.number().int().min(1).max(100);
@@ -84,10 +84,10 @@ export function fail(err: unknown): CallToolResult {
   if (err instanceof AvitoAdsError) {
     const hint = authHint(err);
     if (hint) message += ` — ${hint}`;
-    if (err.retryAfter !== undefined) message += ` — retry after ${err.retryAfter}s`;
+    if (err.retryAfter !== undefined) message += ` — повтор через ${err.retryAfter} с`;
     if (err.apiPointBalance !== null) message += ` (apiPointBalance: ${err.apiPointBalance})`;
   }
-  return { content: [{ type: "text", text: `Error: ${message}` }], isError: true };
+  return { content: [{ type: "text", text: `Ошибка: ${message}` }], isError: true };
 }
 
 /**
@@ -106,10 +106,10 @@ function authHint(err: AvitoAdsError): string | undefined {
   const apiExplained = typeof body?.message === "string" && body.message.trim() !== "";
   if (apiExplained) return undefined;
   if (err.status === 403) {
-    return "the token is issued for a single account: check AVITO_ADS_ACCOUNT_ID is the account the key was created for";
+    return "токен выдан ровно для одного аккаунта: AVITO_ADS_ACCOUNT_ID должен быть тем аккаунтом, для которого создан ключ";
   }
   if (err.status === 401) {
-    return "the token was rejected: check AVITO_ADS_CLIENT_ID and AVITO_ADS_CLIENT_SECRET";
+    return "токен отклонён: стоит проверить AVITO_ADS_CLIENT_ID и AVITO_ADS_CLIENT_SECRET";
   }
   return undefined;
 }

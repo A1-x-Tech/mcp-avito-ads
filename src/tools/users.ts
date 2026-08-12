@@ -14,10 +14,10 @@ export function registerUserTools(server: McpServer, client: AvitoAdsClient): vo
   server.registerTool(
     "list_users",
     {
-      title: "Account users",
+      title: "Пользователи аккаунта",
       annotations: READ_ONLY,
       description:
-        "Lists the users with access to the ad account — one {id, role, hasLoggedIn} per user, where role is admin or viewer and hasLoggedIn says whether the invited person has ever signed in. Use the ids with set_user_role and delete_user. Scoped to the configured account: it cannot list the users of a child account. Returns apiPointBalance alongside the data (weekly points left).",
+        "Перечисляет пользователей с доступом к рекламному аккаунту — по одной записи {id, role, hasLoggedIn} на пользователя, где role это admin или viewer, а hasLoggedIn показывает, входил ли приглашённый хоть раз. Эти id принимают set_user_role и delete_user. Работает в пределах настроенного аккаунта: пользователей дочернего аккаунта не покажет. Вместе с данными возвращает apiPointBalance (остаток недельных баллов).",
       inputSchema: {},
     },
     async () => {
@@ -32,14 +32,14 @@ export function registerUserTools(server: McpServer, client: AvitoAdsClient): vo
   server.registerTool(
     "add_user",
     {
-      title: "Grant a user access",
+      title: "Выдать пользователю доступ",
       annotations: WRITE,
       description:
-        "Grants an existing Avito user access to the ad account with the given role. userId is that person's numeric Avito user id — this tool cannot invite by email or phone, and cannot create an Avito account. If the user already has access, change their role with set_user_role instead. Returns the API's confirmation plus apiPointBalance.",
+        "Выдаёт существующему пользователю Авито доступ к рекламному аккаунту с указанной ролью. userId — числовой id пользователя Авито; пригласить по почте или телефону и создать аккаунт Авито этот инструмент не может. Если доступ уже есть, роль меняется через set_user_role. Возвращает подтверждение API плюс apiPointBalance.",
       inputSchema: {
-        userId: entityId().describe("Numeric Avito user id of the person to grant access to, e.g. 94235311."),
+        userId: entityId().describe("Числовой id пользователя Авито, которому выдаётся доступ, например 94235311."),
         role: userRoleEnum().describe(
-          "admin — full access, including users, money transfers and campaign edits; viewer — read-only.",
+          "admin — полный доступ, включая пользователей, переводы денег и правки кампаний; viewer — только чтение.",
         ),
       },
     },
@@ -55,14 +55,14 @@ export function registerUserTools(server: McpServer, client: AvitoAdsClient): vo
   server.registerTool(
     "set_user_role",
     {
-      title: "Change a user's role",
+      title: "Изменить роль пользователя",
       annotations: WRITE,
       description:
-        "Changes the role of a user who already has access to the ad account. Applying the role a user already holds is a no-op. It does not grant access (use add_user) and does not revoke it (use delete_user). Returns the API's confirmation plus apiPointBalance.",
+        "Меняет роль пользователя, у которого уже есть доступ к рекламному аккаунту. Назначение той же роли, что стоит сейчас, ничего не меняет. Доступ не выдаёт (для этого add_user) и не отзывает (для этого delete_user). Возвращает подтверждение API плюс apiPointBalance.",
       inputSchema: {
-        userId: entityId().describe("Numeric Avito user id, as returned by list_users."),
+        userId: entityId().describe("Числовой id пользователя Авито, как его возвращает list_users."),
         role: userRoleEnum().describe(
-          "admin — full access, including users, money transfers and campaign edits; viewer — read-only.",
+          "admin — полный доступ, включая пользователей, переводы денег и правки кампаний; viewer — только чтение.",
         ),
       },
     },
@@ -78,12 +78,12 @@ export function registerUserTools(server: McpServer, client: AvitoAdsClient): vo
   server.registerTool(
     "delete_user",
     {
-      title: "Revoke a user's access",
+      title: "Отозвать доступ пользователя",
       annotations: DESTRUCTIVE,
       description:
-        "Revokes a user's access to the ad account. Destructive: the only way back is add_user with an explicit role. It does not delete the person's Avito account, their campaigns or their spend history. Returns the API's confirmation plus apiPointBalance.",
+        "Отзывает доступ пользователя к рекламному аккаунту. Операция разрушительная: вернуть доступ можно только через add_user с явно указанной ролью. Аккаунт Авито этого человека, его кампании и историю расходов не удаляет. Возвращает подтверждение API плюс apiPointBalance.",
       inputSchema: {
-        userId: entityId().describe("Numeric Avito user id to remove from the account, as returned by list_users."),
+        userId: entityId().describe("Числовой id пользователя Авито, которого нужно убрать из аккаунта, как его возвращает list_users."),
       },
     },
     async ({ userId }) => {

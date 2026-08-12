@@ -53,19 +53,19 @@ function nonNegativeNumber(raw: string | undefined, fallback: number): number {
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AvitoAdsConfig {
   const clientId = env.AVITO_ADS_CLIENT_ID;
   if (!clientId) {
-    die("AVITO_ADS_CLIENT_ID is required (OAuth2 client id of your Avito application).", "missing_client_id");
+    die("Требуется AVITO_ADS_CLIENT_ID — client id приложения Авито (OAuth2).", "missing_client_id");
   }
   const clientSecret = env.AVITO_ADS_CLIENT_SECRET;
   if (!clientSecret) {
     die(
-      "AVITO_ADS_CLIENT_SECRET is required (OAuth2 client secret of your Avito application).",
+      "Требуется AVITO_ADS_CLIENT_SECRET — client secret приложения Авито (OAuth2).",
       "missing_client_secret",
     );
   }
 
   const accountRaw = (env.AVITO_ADS_ACCOUNT_ID ?? "").trim();
   if (!accountRaw) {
-    die("AVITO_ADS_ACCOUNT_ID is required (the ad account the credentials belong to).", "missing_account_id");
+    die("Требуется AVITO_ADS_ACCOUNT_ID — рекламный аккаунт, которому принадлежат учётные данные.", "missing_account_id");
   }
   // Strict digits: Number("12abc") is NaN but parseInt("12abc") is 12, and a
   // silently truncated account id would address someone else's account.
@@ -74,7 +74,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AvitoAdsConfig
   // stderr, which MCP hosts capture to disk, and the likeliest way to land here
   // is a client secret pasted into the wrong variable. Describing the shape is
   // just as actionable as quoting the value.
-  const badAccountId = "AVITO_ADS_ACCOUNT_ID must be a positive integer (digits only, no spaces, letters or signs).";
+  const badAccountId =
+    "AVITO_ADS_ACCOUNT_ID должен быть положительным целым числом (только цифры, без пробелов, букв и знаков).";
   if (!/^\d+$/.test(accountRaw)) die(badAccountId, "invalid_account_id");
   const accountId = Number(accountRaw);
   if (!Number.isSafeInteger(accountId) || accountId <= 0) die(badAccountId, "invalid_account_id");
@@ -82,7 +83,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AvitoAdsConfig
   const envName = (env.AVITO_ADS_ENVIRONMENT ?? "").trim().toLowerCase();
   if (envName && envName !== "production" && envName !== "sandbox") {
     // Same rule: the accepted vocabulary, not the rejected value.
-    die('AVITO_ADS_ENVIRONMENT must be either "production" or "sandbox".', "invalid_environment");
+    die('AVITO_ADS_ENVIRONMENT должен быть "production" или "sandbox".', "invalid_environment");
   }
   const environment: Environment = envName === "sandbox" ? "sandbox" : "production";
 

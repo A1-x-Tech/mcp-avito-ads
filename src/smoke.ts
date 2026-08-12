@@ -22,49 +22,49 @@ let lastBalance: number | null = null;
 async function step<T>(label: string, call: Promise<ApiResponse<T>>): Promise<T> {
   const res = await call;
   if (res.apiPointBalance !== null) lastBalance = res.apiPointBalance;
-  const points = res.apiPointBalance === null ? "not reported" : String(res.apiPointBalance);
-  console.log(`${label} — points left: ${points}`);
+  const points = res.apiPointBalance === null ? "не сообщён" : String(res.apiPointBalance);
+  console.log(`${label} — остаток баллов: ${points}`);
   return res.data;
 }
 
 async function main(): Promise<void> {
   const config = loadConfig();
   const client = new AvitoAdsClient(config);
-  console.log(`Avito Ads smoke check (read-only) — account ${config.accountId}, ${config.environment}\n`);
+  console.log(`Проверка Авито Рекламы (только чтение) — аккаунт ${config.accountId}, ${config.environment}\n`);
 
-  const account = await step("account   ", client.getAccount());
-  console.log(`            ${account.shortName ?? account.longName ?? "?"} (INN ${account.inn ?? "?"})`);
+  const account = await step("аккаунт   ", client.getAccount());
+  console.log(`            ${account.shortName ?? account.longName ?? "?"} (ИНН ${account.inn ?? "?"})`);
 
-  const balance = await step("balance   ", client.getBalance());
-  console.log(`            ${balance.balance ?? "?"} RUB, ${balance.bonusBalance ?? "?"} bonus RUB`);
+  const balance = await step("баланс    ", client.getBalance());
+  console.log(`            ${balance.balance ?? "?"} ₽, ${balance.bonusBalance ?? "?"} бонусных ₽`);
 
-  const campaigns = await step("campaigns ", client.listCampaigns({ limit: 3 }));
-  console.log(`            ${campaigns.items.length} of ${campaigns.total} returned`);
+  const campaigns = await step("кампании  ", client.listCampaigns({ limit: 3 }));
+  console.log(`            возвращено ${campaigns.items.length} из ${campaigns.total}`);
   for (const campaign of campaigns.items) {
     console.log(`            - [${campaign.id ?? "?"}] ${campaign.name ?? ""} (${campaign.status ?? "?"})`);
   }
 
-  const left = lastBalance === null ? "not reported by the API" : `${lastBalance} points`;
-  console.log(`\nSmoke check passed. Weekly quota left: ${left} (replenished Mondays 00:00 UTC).`);
+  const left = lastBalance === null ? "не сообщён API" : `${lastBalance} баллов`;
+  console.log(`\nПроверка пройдена. Остаток недельной квоты: ${left} (пополняется по понедельникам в 00:00 UTC).`);
 }
 
 main().catch((err) => {
   // Missing credentials are a user error, not a bug: report them without a stack.
   if (err instanceof ConfigError) {
-    console.error(`Smoke check cannot run: ${err.message}`);
+    console.error(`Проверку не запустить: ${err.message}`);
     console.error(
-      "Set AVITO_ADS_CLIENT_ID, AVITO_ADS_CLIENT_SECRET and AVITO_ADS_ACCOUNT_ID " +
-        "(add AVITO_ADS_ENVIRONMENT=sandbox to hit the sandbox instead of production).",
+      "Нужно задать AVITO_ADS_CLIENT_ID, AVITO_ADS_CLIENT_SECRET и AVITO_ADS_ACCOUNT_ID " +
+        "(и AVITO_ADS_ENVIRONMENT=sandbox, чтобы обращаться к песочнице вместо production).",
     );
     process.exit(1);
   }
-  console.error(`\nSmoke check FAILED: ${err instanceof Error ? err.message : String(err)}`);
+  console.error(`\nПроверка ПРОВАЛЕНА: ${err instanceof Error ? err.message : String(err)}`);
   // A bare 403 here is almost always the account id, not the key: the token is
   // minted for one account, and a mismatch fails exactly like a rights problem.
   if (err instanceof AvitoAdsError && err.status === 403) {
     console.error(
-      "A 403 with no message means the token was issued for a different account — " +
-        "check AVITO_ADS_ACCOUNT_ID is the account whose cabinet the key was created in.",
+      "403 без сообщения означает, что токен выдан для другого аккаунта: " +
+        "AVITO_ADS_ACCOUNT_ID должен быть тем аккаунтом, в кабинете которого создан ключ.",
     );
   }
   process.exit(1);

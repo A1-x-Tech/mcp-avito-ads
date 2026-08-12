@@ -124,38 +124,38 @@ export function validateContractInput(input: ContractInput): void {
   const require = (key: keyof ContractInput, message: string): void => {
     if (input[key] === undefined || input[key] === null) throw new ValidationError(message);
   };
-  require("advertiserId", "advertiserId is required.");
-  require("type", "type is required.");
-  require("description", "description (counterparty type) is required.");
+  require("advertiserId", "Требуется advertiserId.");
+  require("type", "Требуется type.");
+  require("description", "Требуется description (тип контрагента).");
 
   const hasParent = input.parentId !== undefined;
   const hasIntermediary = input.intermediary !== undefined;
 
   if (input.type === "external") {
-    require("cid", 'A contract of type "external" requires cid.');
-    if (hasParent) throw new ValidationError('A contract of type "external" cannot carry parentId.');
+    require("cid", 'Договор типа "external" требует cid.');
+    if (hasParent) throw new ValidationError('Договор типа "external" не может нести parentId.');
   }
 
   if (input.type === "service" || input.type === "intermediary") {
     for (const key of ["subject", "isReportingRequired", "date", "number"] as const) {
-      require(key, `A contract of type "${input.type}" requires subject, isReportingRequired, date and number.`);
+      require(key, `Договор типа "${input.type}" требует subject, isReportingRequired, date и number.`);
     }
-    if (input.cid !== undefined) throw new ValidationError(`A contract of type "${input.type}" cannot carry cid.`);
+    if (input.cid !== undefined) throw new ValidationError(`Договор типа "${input.type}" не может нести cid.`);
   }
 
   if (input.type === "intermediary") {
-    require("object", 'A contract of type "intermediary" requires object.');
-    require("isFundsAllocationToPrincipal", 'A contract of type "intermediary" requires isFundsAllocationToPrincipal.');
+    require("object", 'Договор типа "intermediary" требует object.');
+    require("isFundsAllocationToPrincipal", 'Договор типа "intermediary" требует isFundsAllocationToPrincipal.');
   }
 
   if (input.date !== undefined && !DATE_RE.test(input.date)) {
-    throw new ValidationError("date must be in YYYY-MM-DD format.");
+    throw new ValidationError("date должен быть в формате YYYY-MM-DD.");
   }
   if (hasParent && hasIntermediary) {
-    throw new ValidationError("An additional agreement (parentId is set) cannot carry intermediary details.");
+    throw new ValidationError("Дополнительное соглашение (задан parentId) не может нести реквизиты intermediary.");
   }
   if (!hasParent && !hasIntermediary) {
-    throw new ValidationError("intermediary (contractor details) is required unless parentId is set.");
+    throw new ValidationError("intermediary (реквизиты исполнителя) обязателен, если не задан parentId.");
   }
 }
 
@@ -265,14 +265,14 @@ export class AvitoAdsClient {
 
     const data = parseBody(text);
     if (!res.ok) {
-      throw new AvitoAdsError(res.status, data, "OAuth2 token request failed", {
+      throw new AvitoAdsError(res.status, data, "Запрос токена OAuth2 не удался", {
         retryAfter: retryAfterSeconds(res),
       });
     }
 
     const parsed = (data ?? {}) as { access_token?: unknown; expires_in?: unknown };
     if (typeof parsed.access_token !== "string" || !parsed.access_token) {
-      throw new AvitoAdsError(res.status, data, "OAuth2 token response carried no access_token");
+      throw new AvitoAdsError(res.status, data, "В ответе токена OAuth2 нет access_token");
     }
     const expiresIn = typeof parsed.expires_in === "number" ? parsed.expires_in : 86_400;
     this.token = { value: parsed.access_token, expiresAt: Date.now() + expiresIn * 1000 };
@@ -299,7 +299,7 @@ export class AvitoAdsClient {
       return { res, text };
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") {
-        throw new Error(`Request to "${label}" timed out after ${this.timeoutMs}ms`);
+        throw new Error(`Запрос к "${label}" превысил тайм-аут ${this.timeoutMs} мс`);
       }
       throw err;
     } finally {
@@ -402,16 +402,16 @@ export class AvitoAdsClient {
     const url = new URL(path.replace(/^\/+/, ""), this.base);
     const baseOrigin = new URL(this.base).origin;
     if (url.origin !== baseOrigin) {
-      throw new Error(`API path must be relative (resolved to foreign origin ${url.origin})`);
+      throw new Error(`Путь API должен быть относительным (разрешился в чужой origin ${url.origin})`);
     }
     if (!url.pathname.startsWith(this.basePath)) {
-      throw new Error(`API path must stay under ${this.basePath} (resolved to ${url.pathname})`);
+      throw new Error(`Путь API должен оставаться внутри ${this.basePath} (разрешился в ${url.pathname})`);
     }
     const account = accountSegment(url.pathname.slice(this.basePath.length));
     if (account !== undefined && account !== String(this.config.accountId)) {
       throw new Error(
-        `API path must address the configured account ${this.config.accountId} (got ${account}); ` +
-          "the account id comes from AVITO_ADS_ACCOUNT_ID and cannot be chosen per call",
+        `Путь API должен адресовать настроенный аккаунт ${this.config.accountId} (получен ${account}); ` +
+          "id аккаунта берётся из AVITO_ADS_ACCOUNT_ID и не выбирается для отдельного вызова",
       );
     }
     return url.toString();
@@ -456,7 +456,7 @@ export class AvitoAdsClient {
    */
   async createSandboxAccount(input: SandboxAccountInput): Promise<ApiResponse<CreatedAccount>> {
     if (!input.contact || Object.keys(input.contact).length === 0) {
-      throw new ValidationError("contact is required when creating an account.");
+      throw new ValidationError("При создании аккаунта требуется contact.");
     }
     return this.send<CreatedAccount>("POST", this.accountPath(), compact(input), false);
   }
@@ -488,7 +488,7 @@ export class AvitoAdsClient {
     shortName: string;
     isSelfAdvertisingEnabled: boolean;
   }): Promise<ApiResponse<CreatedChildAccount>> {
-    if (!params.shortName) throw new ValidationError("shortName is required.");
+    if (!params.shortName) throw new ValidationError("Требуется shortName.");
     return this.send<CreatedChildAccount>(
       "POST",
       this.accountPath("create-nonpayer-child-account"),
@@ -647,13 +647,13 @@ export class AvitoAdsClient {
 /** Rejects budgets, bids and transfers below the API's minimum of 1. */
 function assertAmount(value: number, field: string): void {
   if (!Number.isFinite(value) || value < MIN_AMOUNT) {
-    throw new ValidationError(`${field} must be at least ${MIN_AMOUNT}, got ${value}.`);
+    throw new ValidationError(`${field} должен быть не меньше ${MIN_AMOUNT}, получено ${value}.`);
   }
 }
 
 function assertRole(role: string): UserRole {
   if ((USER_ROLES as readonly string[]).includes(role)) return role as UserRole;
-  throw new ValidationError(`role must be one of ${USER_ROLES.join(", ")}, got "${role}".`);
+  throw new ValidationError(`role должен быть одним из: ${USER_ROLES.join(", ")}; получено "${role}".`);
 }
 
 /**
@@ -670,18 +670,18 @@ function parseIsoDate(value: string): number {
 /** Checks the date format and the 100-day cap before spending an API point. */
 function assertPeriod(dateFrom: string, dateTo: string): void {
   if (!DATE_RE.test(dateFrom) || !DATE_RE.test(dateTo)) {
-    throw new ValidationError("dateFrom and dateTo must be in YYYY-MM-DD format.");
+    throw new ValidationError("dateFrom и dateTo должны быть в формате YYYY-MM-DD.");
   }
   const from = parseIsoDate(dateFrom);
   const to = parseIsoDate(dateTo);
   if (Number.isNaN(from) || Number.isNaN(to)) {
-    throw new ValidationError("dateFrom and dateTo must be real calendar dates.");
+    throw new ValidationError("dateFrom и dateTo должны быть существующими календарными датами.");
   }
-  if (from > to) throw new ValidationError("dateFrom must not be later than dateTo.");
+  if (from > to) throw new ValidationError("dateFrom не может быть позже dateTo.");
   const days = Math.round((to - from) / 86_400_000) + 1;
   if (days > MAX_STATS_PERIOD_DAYS) {
     throw new ValidationError(
-      `The statistics period must not exceed ${MAX_STATS_PERIOD_DAYS} days, got ${days}.`,
+      `Период статистики не может превышать ${MAX_STATS_PERIOD_DAYS} дней, получено ${days}.`,
     );
   }
 }

@@ -19,7 +19,7 @@ import { CREATE, fail, legalTypeEnum, ok, READ_ONLY } from "./util.js";
  */
 const contactObject = () =>
   z.record(z.any()).refine((value) => Object.keys(value).length > 0, {
-    message: "contact must not be empty — pass at least one of name, email, phone",
+    message: "contact не может быть пустым — нужно передать хотя бы одно из name, email, phone",
   });
 
 /** A required, non-empty legal-details string. */
@@ -29,10 +29,10 @@ export function registerAccountTools(server: McpServer, client: AvitoAdsClient):
   server.registerTool(
     "get_account",
     {
-      title: "Account details",
+      title: "Реквизиты аккаунта",
       annotations: READ_ONLY,
       description:
-        "Returns the legal details of the ad account this server is bound to: inn, kpp, ogrn, shortName, longName, legalAddress, actualAddress and the contact / manager blocks. Takes no arguments — the account is fixed by AVITO_ADS_ACCOUNT_ID and cannot be chosen per call. Carries no money figures (use get_balance) and no campaign data. Like every tool here, the result also reports apiPointBalance: the API points left this week (the quota refills Mondays 00:00 UTC).",
+        "Возвращает юридические реквизиты рекламного аккаунта, к которому привязан сервер: inn, kpp, ogrn, shortName, longName, legalAddress, actualAddress и блоки contact / manager. Аргументов не принимает — аккаунт задан в AVITO_ADS_ACCOUNT_ID и не выбирается для отдельного вызова. Денежных сумм не содержит (для них get_balance), данных кампаний тоже. Как и у всех инструментов здесь, в ответе есть apiPointBalance: остаток баллов API на текущую неделю (квота пополняется по понедельникам в 00:00 UTC).",
       inputSchema: {},
     },
     async () => {
@@ -47,10 +47,10 @@ export function registerAccountTools(server: McpServer, client: AvitoAdsClient):
   server.registerTool(
     "get_balance",
     {
-      title: "Account balance",
+      title: "Баланс аккаунта",
       annotations: READ_ONLY,
       description:
-        "Returns the current balance of the configured ad account in rubles: balance (real money) and bonusBalance (bonus rubles, spendable on ads only). Takes no arguments. It is a snapshot of right now, not a history — for money spent over a period use the statistics tools. Does not top the account up.",
+        "Возвращает текущий баланс настроенного рекламного аккаунта в рублях: balance (реальные деньги) и bonusBalance (бонусные рубли, которые можно тратить только на рекламу). Аргументов не принимает. Это срез на текущий момент, а не история — расход за период дают инструменты статистики. Аккаунт не пополняет.",
       inputSchema: {},
     },
     async () => {
@@ -65,28 +65,28 @@ export function registerAccountTools(server: McpServer, client: AvitoAdsClient):
   server.registerTool(
     "create_sandbox_account",
     {
-      title: "Create a sandbox account",
+      title: "Создать аккаунт в песочнице",
       annotations: CREATE,
       description:
-        'SANDBOX ONLY: creates a test advertiser account and returns its accountID. This server refuses the call unless AVITO_ADS_ENVIRONMENT=sandbox, and the refusal costs no API point. contact must be a non-empty object, e.g. {"name":"Ivan Ivanov","email":"ivan@example.com","phone":"+79001234567"} — an empty one is rejected before any request goes out. Calling twice creates two accounts. It cannot edit or delete an account, and the server keeps working against AVITO_ADS_ACCOUNT_ID: the new id is not adopted, put it in the config to use it.',
+        'ТОЛЬКО ПЕСОЧНИЦА: создаёт тестовый аккаунт рекламодателя и возвращает его accountID. Сервер отклоняет вызов, если не задано AVITO_ADS_ENVIRONMENT=sandbox, и такой отказ не стоит балла API. contact — непустой объект, например {"name":"Иван Иванов","email":"ivan@example.com","phone":"+79001234567"}; пустой отклоняется до отправки запроса. Два вызова создают два аккаунта. Изменить или удалить аккаунт нельзя, а сервер продолжает работать с AVITO_ADS_ACCOUNT_ID: новый id сам не подхватывается, для работы с ним его нужно прописать в конфигурации.',
       inputSchema: {
-        inn: requiredText().describe("Taxpayer number (INN) of the test company: 10 digits for a company, 12 for a sole proprietor."),
-        shortName: requiredText().describe('Short legal name, e.g. "OOO Romashka".'),
-        longName: requiredText().describe('Full legal name, e.g. "Obshchestvo s ogranichennoy otvetstvennostyu Romashka".'),
-        ogrn: requiredText().describe("State registration number (OGRN for a company, OGRNIP for a sole proprietor)."),
-        legalAddress: requiredText().describe("Registered legal address."),
-        actualAddress: requiredText().describe("Actual postal address; may repeat legalAddress."),
+        inn: requiredText().describe("ИНН тестовой компании: 10 цифр для юрлица, 12 для ИП."),
+        shortName: requiredText().describe('Краткое юридическое наименование, например "ООО Ромашка".'),
+        longName: requiredText().describe('Полное юридическое наименование, например "Общество с ограниченной ответственностью Ромашка".'),
+        ogrn: requiredText().describe("Государственный регистрационный номер (ОГРН для юрлица, ОГРНИП для ИП)."),
+        legalAddress: requiredText().describe("Юридический адрес."),
+        actualAddress: requiredText().describe("Фактический почтовый адрес; может совпадать с legalAddress."),
         contact: contactObject().describe(
-          'Contact person of the account, passed to the API as-is and must not be empty, e.g. {"name":"Ivan Ivanov","email":"ivan@example.com","phone":"+79001234567"}.',
+          'Контактное лицо аккаунта; передаётся в API как есть и не может быть пустым, например {"name":"Иван Иванов","email":"ivan@example.com","phone":"+79001234567"}.',
         ),
         kpp: z
           .string()
           .min(1)
           .optional()
-          .describe("Tax registration reason code (KPP). Companies (legalType ul) have one; sole proprietors do not — omit it then."),
+          .describe("КПП. Есть у юрлиц (legalType ul); у ИП его нет — тогда поле опускается."),
         legalType: legalTypeEnum()
           .optional()
-          .describe("Legal form: ul = company, ip = sole proprietor."),
+          .describe("Организационно-правовая форма: ul — юрлицо, ip — ИП."),
       },
     },
     async ({ inn, shortName, longName, ogrn, legalAddress, actualAddress, contact, kpp, legalType }) => {
@@ -97,8 +97,8 @@ export function registerAccountTools(server: McpServer, client: AvitoAdsClient):
         // ours: bound to production, the call never goes out (and costs nothing).
         if (client.environment !== "sandbox") {
           return fail(
-            "create_sandbox_account works only against the sandbox; this server is bound to " +
-              `${client.environment}. Set AVITO_ADS_ENVIRONMENT=sandbox and restart to use it.`,
+            "create_sandbox_account работает только с песочницей, а этот сервер привязан к окружению " +
+              `${client.environment}. Чтобы им воспользоваться, нужно задать AVITO_ADS_ENVIRONMENT=sandbox и перезапустить сервер.`,
           );
         }
         return ok(

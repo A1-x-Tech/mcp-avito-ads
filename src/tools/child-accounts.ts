@@ -17,10 +17,10 @@ export function registerChildAccountTools(server: McpServer, client: AvitoAdsCli
   server.registerTool(
     "list_child_accounts",
     {
-      title: "Child accounts",
+      title: "Дочерние аккаунты",
       annotations: READ_ONLY,
       description:
-        "Lists the child (sub-)accounts of the configured agency account. Each entry is {account:{id,shortName}, contract}. Balances are NOT included — use list_child_accounts_with_balances for those. Returns every child in one call: no paging, no filter, no search. `apiPointBalance` in every result of this server is the API points left for the current week (the quota refills Mondays 00:00 UTC); pace the calls by it.",
+        "Перечисляет дочерние (суб-)аккаунты настроенного агентского аккаунта. Каждая запись — {account:{id,shortName}, contract}. Балансов здесь НЕТ, для них есть list_child_accounts_with_balances. Возвращает всех дочерних за один вызов: без постраничной выдачи, фильтров и поиска. `apiPointBalance` в любом ответе этого сервера — остаток баллов API на текущую неделю (квота пополняется по понедельникам в 00:00 UTC); по нему и стоит рассчитывать частоту вызовов.",
       inputSchema: {},
     },
     async () => {
@@ -35,10 +35,10 @@ export function registerChildAccountTools(server: McpServer, client: AvitoAdsCli
   server.registerTool(
     "list_child_accounts_with_balances",
     {
-      title: "Child accounts with balances",
+      title: "Дочерние аккаунты с балансами",
       annotations: READ_ONLY,
       description:
-        "Same list as list_child_accounts, plus each child's balance: {balance, bonusBalance} in rubles and bonus rubles. Use it to see which child is out of money before transfer_funds / transfer_bonus, and to verify a transfer landed. Shows the children's balances only — the parent's own balance comes from get_balance.",
+        "Тот же список, что и list_child_accounts, плюс баланс каждого дочернего аккаунта: {balance, bonusBalance} в рублях и бонусных рублях. Позволяет увидеть, у кого кончились деньги, перед transfer_funds / transfer_bonus и убедиться, что перевод дошёл. Показывает только балансы дочерних аккаунтов — баланс родительского даёт get_balance.",
       inputSchema: {},
     },
     async () => {
@@ -53,19 +53,19 @@ export function registerChildAccountTools(server: McpServer, client: AvitoAdsCli
   server.registerTool(
     "create_child_account",
     {
-      title: "Create a non-payer child account",
+      title: "Создать дочерний аккаунт без права оплаты",
       annotations: CREATE,
       description:
-        "Creates a non-payer child account under the configured agency account and returns {accountID, clientKey, clientSecret} — the new account's own API credentials, handed out only here, so store them immediately. Non-payer means the child cannot top up its own balance: fund it with transfer_funds from the parent. Cannot create a payer account, cannot rename or delete one, and cannot re-read the secret later. Calling it twice creates two accounts.",
+        "Создаёт дочерний аккаунт без права оплаты под настроенным агентским аккаунтом и возвращает {accountID, clientKey, clientSecret} — собственные учётные данные API нового аккаунта, которые выдаются только здесь, поэтому сохранить их нужно сразу. Без права оплаты означает, что аккаунт не может пополнить свой баланс сам: деньги приходят из родительского через transfer_funds. Создать аккаунт с правом оплаты, переименовать или удалить аккаунт, а также прочитать секрет заново нельзя. Два вызова создают два аккаунта.",
       inputSchema: {
         shortName: z
           .string()
           .min(1)
-          .describe('Display name of the new child account, e.g. "OOO Romashka".'),
+          .describe('Отображаемое название нового дочернего аккаунта, например "ООО Ромашка".'),
         isSelfAdvertisingEnabled: z
           .boolean()
           .describe(
-            "Whether the new account may run self-advertising (advertise its own goods and services). Required — state it explicitly, the API is sent this flag on every create.",
+            "Может ли новый аккаунт вести саморекламу (рекламировать собственные товары и услуги). Обязательное поле — значение указывается явно, флаг уходит в API при каждом создании.",
           ),
       },
     },
@@ -81,15 +81,15 @@ export function registerChildAccountTools(server: McpServer, client: AvitoAdsCli
   server.registerTool(
     "transfer_funds",
     {
-      title: "Transfer money to another account",
+      title: "Перевести деньги на другой аккаунт",
       annotations: DESTRUCTIVE,
       description:
-        "Moves REAL MONEY out of the configured account into another account (normally one of its children): `amount` rubles, minimum 1. Not reversible through this API — there is no undo, no cancel and no transfer log; the only way back is a second transfer in the other direction, which needs the destination account to be able to send funds. A success returns an empty data object: treat any non-error response as done and never repeat the call. After a network or server error the outcome is unknown — check list_child_accounts_with_balances before retrying, or the money moves twice.",
+        "Переводит РЕАЛЬНЫЕ ДЕНЬГИ с настроенного аккаунта на другой (обычно на один из дочерних): `amount` рублей, минимум 1. Через этот API перевод необратим — нет ни отмены, ни отката, ни журнала переводов; вернуть деньги можно только встречным переводом, а для него аккаунт-получатель должен уметь отправлять средства. При успехе возвращается пустой объект data: любой ответ без ошибки означает, что перевод выполнен, и повторять вызов нельзя. После сетевой или серверной ошибки исход неизвестен — прежде чем повторять, следует проверить list_child_accounts_with_balances, иначе деньги уйдут дважды.",
       inputSchema: {
         accountIdTo: entityId().describe(
-          "Destination account id — the account that RECEIVES the money. The sender is always the configured account and cannot be overridden. Get child ids from list_child_accounts.",
+          "Id аккаунта назначения — того, кто ПОЛУЧАЕТ деньги. Отправитель — всегда настроенный аккаунт, и его нельзя переопределить. Id дочерних аккаунтов даёт list_child_accounts.",
         ),
-        amount: rubleAmount().describe("Amount in rubles. Minimum 1; anything less is rejected."),
+        amount: rubleAmount().describe("Сумма в рублях. Минимум 1; меньшее значение отклоняется."),
       },
     },
     async ({ accountIdTo, amount }) => {
@@ -104,15 +104,15 @@ export function registerChildAccountTools(server: McpServer, client: AvitoAdsCli
   server.registerTool(
     "transfer_bonus",
     {
-      title: "Transfer bonus rubles to another account",
+      title: "Перевести бонусные рубли на другой аккаунт",
       annotations: DESTRUCTIVE,
       description:
-        "Moves bonus rubles (the `bonusBalance` — promotional funds that buy ads but cannot be withdrawn as cash) out of the configured account into another account: `amount` bonus rubles, minimum 1. Same rules as transfer_funds: not reversible through this API, an empty data object means it went through, and after a network or server error check list_child_accounts_with_balances instead of repeating the call. It moves bonuses only — real money goes through transfer_funds.",
+        "Переводит бонусные рубли (`bonusBalance` — промо-средства, которыми можно оплачивать рекламу, но нельзя вывести деньгами) с настроенного аккаунта на другой: `amount` бонусных рублей, минимум 1. Правила те же, что у transfer_funds: через этот API перевод необратим, пустой объект data означает, что он прошёл, а после сетевой или серверной ошибки следует проверить list_child_accounts_with_balances, а не повторять вызов. Переводит только бонусы — реальные деньги идут через transfer_funds.",
       inputSchema: {
         accountIdTo: entityId().describe(
-          "Destination account id — the account that RECEIVES the bonuses. The sender is always the configured account.",
+          "Id аккаунта назначения — того, кто ПОЛУЧАЕТ бонусы. Отправитель — всегда настроенный аккаунт.",
         ),
-        amount: rubleAmount().describe("Amount in bonus rubles. Minimum 1; anything less is rejected."),
+        amount: rubleAmount().describe("Сумма в бонусных рублях. Минимум 1; меньшее значение отклоняется."),
       },
     },
     async ({ accountIdTo, amount }) => {

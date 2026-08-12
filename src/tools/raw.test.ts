@@ -145,7 +145,7 @@ test("GET with a body is refused with the fix named, not with fetch's opaque err
   // "Request with GET/HEAD method cannot have body", which names no way out.
   const res = await h.raw({ path: "v1/account/{accountID}/campaigns", body: { filter: {}, limit: 20 } });
   assert.equal(res.isError, true);
-  assert.match(res.content[0].text, /GET request cannot carry a body/);
+  assert.match(res.content[0].text, /GET-запрос не может нести тело/);
   assert.match(res.content[0].text, /method="POST"/, "the message must name the fix");
   assert.equal(h.calls.length, 0, "not even a token may be minted");
 });
@@ -154,7 +154,7 @@ test("an explicit GET with a body is refused too, not just the defaulted one", a
   const h = harness();
   const res = await h.raw({ path: "v1/account/{accountID}/campaigns", method: "GET", body: { limit: 20 } });
   assert.equal(res.isError, true);
-  assert.match(res.content[0].text, /GET request cannot carry a body/);
+  assert.match(res.content[0].text, /GET-запрос не может нести тело/);
   assert.equal(h.calls.length, 0);
 });
 
@@ -200,7 +200,7 @@ test("a path escaping to another origin is an isError result, with no request se
     const h = harness();
     const res = await h.raw({ path: evil });
     assert.equal(res.isError, true, `${JSON.stringify(evil)} should be isError`);
-    assert.match(res.content[0].text, /foreign origin/);
+    assert.match(res.content[0].text, /чужой origin/);
     assert.equal(h.calls.length, 0, `must not fetch for ${JSON.stringify(evil)}`);
   }
 });
@@ -209,7 +209,7 @@ test("a path climbing out of the API prefix is refused (the token endpoint stays
   const h = harness();
   const res = await h.raw({ path: "../token" });
   assert.equal(res.isError, true);
-  assert.match(res.content[0].text, /must stay under/);
+  assert.match(res.content[0].text, /должен оставаться внутри/);
   assert.equal(h.calls.length, 0);
 });
 
@@ -224,7 +224,7 @@ test("a path naming another account is refused — the account id is config, nev
     const h = harness();
     const res = await h.raw({ path, method: "POST", confirmWrite: true });
     assert.equal(res.isError, true, `${path} should be isError`);
-    assert.match(res.content[0].text, /must address the configured account 777/);
+    assert.match(res.content[0].text, /должен адресовать настроенный аккаунт 777/);
     assert.equal(h.calls.length, 0, `must not fetch for ${path}`);
   }
 });
@@ -235,7 +235,7 @@ test("the description warns that the tool reaches the money and delete endpoints
   const text = harness().config.description ?? "";
   assert.match(text, /funds-transfer/);
   assert.match(text, /delete-user/);
-  assert.match(text, /confirmWrite=true is your explicit acknowledgement/);
+  assert.match(text, /confirmWrite=true — явное подтверждение/);
 });
 
 test("an API error is returned as an isError result, not thrown", async () => {

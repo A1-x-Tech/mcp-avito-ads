@@ -30,29 +30,29 @@ export function registerRawTool(server: McpServer, client: AvitoAdsClient): void
   server.registerTool(
     "raw_request",
     {
-      title: "Raw Avito Ads API call",
+      title: "Прямой вызов API Авито Рекламы",
       // Escape hatch: it can reach every write endpoint, funds-transfer and
       // delete-user included, so it carries the destructive hint.
       annotations: DESTRUCTIVE,
       description:
-        'Escape hatch to call any Avito Ads API path directly, for endpoints without a dedicated tool — e.g. GET "v1/account/{accountID}/balance" or POST "v1/account/{accountID}/campaigns". Paths are relative to the API base and account-scoped; the literal {accountID} placeholder is replaced with the configured account id, a path naming a different account is refused, and so is one that escapes the API base. `body` is sent as JSON. It can reach every write endpoint — funds-transfer, bonus-transfer, delete-user and the create-* endpoints — with none of the client-side validation the dedicated tools apply, and nothing here is reversible; prefer transfer_funds / delete_user / create_* when they exist. confirmWrite=true is your explicit acknowledgement that the path may write, so check the path before setting it — POST is also used for harmless list and statistics reads, which need the flag too. GET runs freely. Returns the raw response plus apiPointBalance (weekly points left).',
+        'Универсальный запрос к любому пути API Авито Рекламы — для эндпоинтов, у которых нет отдельного инструмента, например GET "v1/account/{accountID}/balance" или POST "v1/account/{accountID}/campaigns". Пути задаются относительно базы API и привязаны к аккаунту: подстановка {accountID} заменяется на настроенный id аккаунта, путь с другим аккаунтом отклоняется, как и путь, выходящий за базу API. `body` отправляется как JSON. Через него доступны все пишущие эндпоинты — funds-transfer, bonus-transfer, delete-user и create-*, — причём без клиентских проверок, которые делают отдельные инструменты, и ничего из этого не отменить; когда специальный инструмент есть, лучше взять его: transfer_funds / delete_user / create_*. confirmWrite=true — явное подтверждение того, что путь может писать, поэтому перед установкой флага путь стоит проверить: POST используется и для безобидных чтений — списков и статистики, — которым флаг тоже нужен. GET выполняется без ограничений. Возвращает сырой ответ плюс apiPointBalance (остаток недельных баллов).',
       inputSchema: {
         path: z
           .string()
           .min(1)
           .describe(
-            'API path, e.g. "v1/account/{accountID}/groups" or "v1/account/{accountID}/campaigns/123/stats".',
+            'Путь API, например "v1/account/{accountID}/groups" или "v1/account/{accountID}/campaigns/123/stats".',
           ),
-        method: z.enum(["GET", "POST", "DELETE"]).optional().describe("HTTP method. Default GET."),
+        method: z.enum(["GET", "POST", "DELETE"]).optional().describe("HTTP-метод. По умолчанию GET."),
         body: z
           .record(z.any())
           .optional()
-          .describe('JSON request body, e.g. {"filter":{},"limit":20,"page":1} for a list endpoint.'),
+          .describe('Тело запроса в JSON, например {"filter":{},"limit":20,"page":1} для эндпоинта списка.'),
         confirmWrite: z
           .boolean()
           .optional()
           .describe(
-            "Must be true for POST or DELETE. Setting it acknowledges that the path may write — funds-transfer and delete-user are POST/DELETE like any list read.",
+            "Для POST и DELETE должен быть true. Установка флага подтверждает, что путь может писать: funds-transfer и delete-user — такие же POST/DELETE, как и любое чтение списка.",
           ),
       },
     },
@@ -65,12 +65,12 @@ export function registerRawTool(server: McpServer, client: AvitoAdsClient): void
         // body", so name the actual fix instead: this API reads over POST.
         if (m === "GET" && body !== undefined) {
           return fail(
-            `A GET request cannot carry a body. Avito serves its filtered reads (lists, statistics) over POST — ` +
-              `re-run "${path}" with method="POST" and confirmWrite=true, or drop the body.`,
+            `GET-запрос не может нести тело. Авито отдаёт чтения с фильтром (списки, статистику) через POST: ` +
+              `нужно повторить "${path}" с method="POST" и confirmWrite=true либо убрать тело.`,
           );
         }
         if (!isReadMethod(m) && confirmWrite !== true) {
-          return fail(`"${m} ${path}" can write to the account. Re-run with confirmWrite=true to proceed.`);
+          return fail(`"${m} ${path}" может изменить данные аккаунта. Для выполнения нужно повторить вызов с confirmWrite=true.`);
         }
         return ok(await client.request(m, expandAccountPath(path, client.accountId), body));
       } catch (e) {

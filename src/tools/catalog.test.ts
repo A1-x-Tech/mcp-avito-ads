@@ -90,7 +90,7 @@ test("the list tools are read-only and the group writes are non-destructive and 
 test("every description spells out what this API cannot do", () => {
   const { configs } = harness();
   for (const [name, cfg] of Object.entries(configs)) {
-    assert.match(cfg.description ?? "", /cannot/, `${name} must state the missing surface`);
+    assert.match(cfg.description ?? "", /нельзя/, `${name} must state the missing surface`);
   }
 });
 

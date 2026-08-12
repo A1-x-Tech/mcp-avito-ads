@@ -100,10 +100,10 @@ test("the transfer descriptions say the move is irreversible and must not be rep
   const { configs } = harness();
   for (const name of ["transfer_funds", "transfer_bonus"]) {
     const description = configs[name].description ?? "";
-    assert.match(description, /not reversible/i, `${name} must warn that it cannot be undone`);
-    assert.match(description, /repeat/i, `${name} must warn against repeating the call`);
+    assert.match(description, /необратим/i, `${name} must warn that it cannot be undone`);
+    assert.match(description, /повтор/i, `${name} must warn against repeating the call`);
   }
-  assert.match(configs.transfer_funds.description ?? "", /REAL MONEY/);
+  assert.match(configs.transfer_funds.description ?? "", /РЕАЛЬНЫЕ ДЕНЬГИ/);
 });
 
 test("the list tools call their client method with no arguments", async () => {

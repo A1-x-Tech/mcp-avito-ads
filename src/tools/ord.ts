@@ -43,14 +43,14 @@ import {
 const intermediaryDetails = () =>
   z
     .object({
-      inn: z.string().min(1).describe("Taxpayer number (INN) of the contractor."),
-      shortName: z.string().optional().describe('Short legal name, e.g. "OOO Reklama".'),
-      longName: z.string().optional().describe("Full legal name."),
-      ogrn: z.string().optional().describe("State registration number (OGRN for a company, OGRNIP for a sole trader)."),
-      kpp: z.string().optional().describe("Tax registration reason code (KPP); companies (ul) only."),
-      legalAddress: z.string().optional().describe("Registered legal address."),
-      actualAddress: z.string().optional().describe("Actual (postal) address."),
-      legalType: legalTypeEnum().optional().describe("Legal entity type: ul (company) or ip (sole trader)."),
+      inn: z.string().min(1).describe("ИНН исполнителя."),
+      shortName: z.string().optional().describe('Краткое юридическое наименование, например "ООО Реклама".'),
+      longName: z.string().optional().describe("Полное юридическое наименование."),
+      ogrn: z.string().optional().describe("Государственный регистрационный номер (ОГРН для юрлица, ОГРНИП для ИП)."),
+      kpp: z.string().optional().describe("КПП; только для юрлиц (ul)."),
+      legalAddress: z.string().optional().describe("Юридический адрес."),
+      actualAddress: z.string().optional().describe("Фактический (почтовый) адрес."),
+      legalType: legalTypeEnum().optional().describe("Тип юридического лица: ul (юрлицо) или ip (ИП)."),
     })
     .passthrough();
 
@@ -58,28 +58,28 @@ export function registerOrdTools(server: McpServer, client: AvitoAdsClient): voi
   server.registerTool(
     "create_advertiser",
     {
-      title: "Register an advertiser (ORD)",
+      title: "Зарегистрировать рекламодателя (ОРД)",
       annotations: CREATE,
       description:
-        "Registers an advertiser (an ORD counterparty) under the account and returns {id} plus apiPointBalance (weekly API points left). The id is what campaigns and contracts reference. Legal details must match the state register: inn (10 digits for ul, 12 for ip), ogrn, and both addresses; kpp applies to companies (ul) only. legalRole marks the ORD role — rd (advertiser), ra (agency), rr (distributor). There is no edit or delete endpoint: a wrong advertiser can only be superseded by creating another one, so check list_advertisers for an existing record first.",
+        "Регистрирует рекламодателя (контрагента ОРД) под аккаунтом и возвращает {id} плюс apiPointBalance (остаток недельных баллов API). На этот id ссылаются кампании и договоры. Юридические реквизиты должны совпадать с госреестром: inn (10 цифр для ul, 12 для ip), ogrn и оба адреса; kpp — только для юрлиц (ul). legalRole задаёт роль по ОРД: rd (рекламодатель), ra (агентство), rr (распространитель). Эндпоинтов изменения и удаления нет: ошибочного рекламодателя можно только заместить новым, поэтому сначала стоит поискать готовую запись через list_advertisers.",
       inputSchema: {
         inn: z
           .string()
           .min(1)
-          .describe("Taxpayer number (INN): 10 digits for a company (ul), 12 for a sole trader (ip)."),
-        shortName: z.string().min(1).describe('Short legal name, e.g. "OOO Reklama".'),
+          .describe("ИНН: 10 цифр для юрлица (ul), 12 для ИП (ip)."),
+        shortName: z.string().min(1).describe('Краткое юридическое наименование, например "ООО Реклама".'),
         longName: z
           .string()
           .min(1)
-          .describe('Full legal name, e.g. "Obshchestvo s ogranichennoy otvetstvennostyu Reklama".'),
-        ogrn: z.string().min(1).describe("State registration number (OGRN for ul, OGRNIP for ip)."),
-        legalAddress: z.string().min(1).describe("Registered legal address."),
-        actualAddress: z.string().min(1).describe("Actual (postal) address; repeat legalAddress if they match."),
+          .describe('Полное юридическое наименование, например "Общество с ограниченной ответственностью Реклама".'),
+        ogrn: z.string().min(1).describe("Государственный регистрационный номер (ОГРН для ul, ОГРНИП для ip)."),
+        legalAddress: z.string().min(1).describe("Юридический адрес."),
+        actualAddress: z.string().min(1).describe("Фактический (почтовый) адрес; если он совпадает с legalAddress, повторяется тот же."),
         legalRole: legalRoleEnum().describe(
-          "ORD role of the counterparty: rd (advertiser), ra (agency), rr (distributor).",
+          "Роль контрагента по ОРД: rd (рекламодатель), ra (агентство), rr (распространитель).",
         ),
-        legalType: legalTypeEnum().describe("Legal entity type: ul (company) or ip (sole trader)."),
-        kpp: z.string().optional().describe("Tax registration reason code (KPP). Companies (ul) only; omit for ip."),
+        legalType: legalTypeEnum().describe("Тип юридического лица: ul (юрлицо) или ip (ИП)."),
+        kpp: z.string().optional().describe("КПП. Только для юрлиц (ul); для ip опускается."),
       },
     },
     async ({ inn, shortName, longName, ogrn, legalAddress, actualAddress, legalRole, legalType, kpp }) => {
@@ -106,25 +106,25 @@ export function registerOrdTools(server: McpServer, client: AvitoAdsClient): voi
   server.registerTool(
     "list_advertisers",
     {
-      title: "List advertisers",
+      title: "Список рекламодателей",
       annotations: READ_ONLY,
       description:
-        "Returns one page of advertisers registered under the account: {total, items, page, limit, hasNextPage} plus apiPointBalance (weekly API points left). Each item carries id, shortName, longName, inn, ogrn, kpp, legalAddress, actualAddress, legalType (ul|ip) and legalRole (rd|ra|rr). Narrow the page with filter.ids / filter.inns / filter.roles; there is no free-text search, so match on names yourself. limit is 1..100 (default 20); page is 1-based.",
+        "Возвращает одну страницу рекламодателей, зарегистрированных под аккаунтом: {total, items, page, limit, hasNextPage} плюс apiPointBalance (остаток недельных баллов API). В каждом элементе id, shortName, longName, inn, ogrn, kpp, legalAddress, actualAddress, legalType (ul|ip) и legalRole (rd|ra|rr). Сузить выдачу можно через filter.ids / filter.inns / filter.roles; полнотекстового поиска нет, совпадения по названиям придётся искать самостоятельно. limit — 1..100 (по умолчанию 20); нумерация page с 1.",
       inputSchema: {
         filter: z
           .object({
-            ids: entityIds().optional().describe("Only these advertiser ids."),
-            inns: z.array(z.string()).optional().describe("Only advertisers with these taxpayer numbers (INN)."),
+            ids: entityIds().optional().describe("Только рекламодатели с этими id."),
+            inns: z.array(z.string()).optional().describe("Только рекламодатели с этими ИНН."),
             roles: z
               .array(legalRoleEnum())
               .optional()
-              .describe("Only these ORD roles: rd (advertiser), ra (agency), rr (distributor)."),
+              .describe("Только эти роли ОРД: rd (рекламодатель), ra (агентство), rr (распространитель)."),
           })
           .passthrough()
           .optional()
-          .describe("Filter for the page. Omit for all advertisers."),
-        limit: pageLimit().optional().describe("Page size, 1..100. Default 20."),
-        page: pageNumber().optional().describe("1-based page number. Default 1."),
+          .describe("Фильтр страницы. Без него возвращаются все рекламодатели."),
+        limit: pageLimit().optional().describe("Размер страницы, 1..100. По умолчанию 20."),
+        page: pageNumber().optional().describe("Номер страницы, нумерация с 1. По умолчанию 1."),
       },
     },
     async ({ filter, limit, page }) => {
@@ -139,49 +139,49 @@ export function registerOrdTools(server: McpServer, client: AvitoAdsClient): voi
   server.registerTool(
     "create_contract",
     {
-      title: "Register a contract (ORD)",
+      title: "Зарегистрировать договор (ОРД)",
       annotations: CREATE,
       description:
-        "Registers an ORD contract between the account and an advertiser and returns {id} plus apiPointBalance (weekly API points left). Which fields are mandatory depends on type: service needs subject, isReportingRequired, date and number (cid is rejected); intermediary needs all of those plus object and isFundsAllocationToPrincipal (cid is rejected); external needs cid only (parentId is rejected). Pass the contractor's legal details in intermediary — required unless parentId is set; with parentId the record is an additional agreement to that contract and must omit intermediary. There is no edit or delete endpoint, so a wrong contract stays on the account forever.",
+        "Регистрирует договор ОРД между аккаунтом и рекламодателем и возвращает {id} плюс apiPointBalance (остаток недельных баллов API). Набор обязательных полей зависит от type: service требует subject, isReportingRequired, date и number (cid отклоняется); intermediary — всё то же плюс object и isFundsAllocationToPrincipal (cid отклоняется); external — только cid (parentId отклоняется). Юридические реквизиты исполнителя передаются в intermediary — они обязательны, если не задан parentId; с parentId запись становится дополнительным соглашением к тому договору, и intermediary в ней быть не должно. Эндпоинтов изменения и удаления нет, поэтому ошибочный договор остаётся на аккаунте навсегда.",
       inputSchema: {
-        advertiserId: entityId().describe("Advertiser this contract is with (the client). From list_advertisers."),
+        advertiserId: entityId().describe("Рекламодатель, с которым заключён договор (клиент). Id даёт list_advertisers."),
         type: contractTypeEnum().describe(
-          "Contract type: service (services rendered), intermediary (mediation), external (concluded outside Avito, identified by cid).",
+          "Тип договора: service (оказание услуг), intermediary (посреднический), external (заключён вне Авито, определяется по cid).",
         ),
         counterpartyType: counterpartyTypeEnum().describe(
-          "Counterparty type — sent as the API's `description` field: direct_with_advertiser or advertiser_intermediary.",
+          "Тип контрагента — уходит в API в поле `description`: direct_with_advertiser или advertiser_intermediary.",
         ),
         subject: contractSubjectEnum()
           .optional()
           .describe(
-            "Contract subject: org-distribution, mediation, distribution, representation, other. Required for service and intermediary.",
+            "Предмет договора: org-distribution, mediation, distribution, representation, other. Обязателен для service и intermediary.",
           ),
         object: contractActionEnum()
           .optional()
           .describe(
-            "Contract action, the API's `object` field: distribution, conclude, commercial, other. Required for intermediary.",
+            "Действие по договору, поле API `object`: distribution, conclude, commercial, other. Обязательно для intermediary.",
           ),
         cid: z
           .string()
           .min(1)
           .optional()
-          .describe("External contract id (ERID-side identifier). Required for type external, rejected for the others."),
-        date: isoDate().optional().describe("Contract date, YYYY-MM-DD. Required for service and intermediary."),
-        number: z.string().min(1).optional().describe("Contract number. Required for service and intermediary."),
+          .describe("Внешний идентификатор договора (со стороны ERID). Обязателен для типа external, для остальных отклоняется."),
+        date: isoDate().optional().describe("Дата договора, YYYY-MM-DD. Обязательна для service и intermediary."),
+        number: z.string().min(1).optional().describe("Номер договора. Обязателен для service и intermediary."),
         isReportingRequired: z
           .boolean()
           .optional()
-          .describe("Whether acts/reports are required under the contract. Required for service and intermediary."),
+          .describe("Нужны ли по договору акты и отчёты. Обязательно для service и intermediary."),
         isFundsAllocationToPrincipal: z
           .boolean()
           .optional()
-          .describe("Whether funds are allocated to the principal. Required for intermediary."),
+          .describe("Распределяются ли средства в пользу принципала. Обязательно для intermediary."),
         parentId: entityId()
           .optional()
-          .describe("Parent contract id. Set it to register an additional agreement; then omit intermediary."),
+          .describe("Id родительского договора. Задаётся, чтобы зарегистрировать дополнительное соглашение; тогда intermediary опускается."),
         intermediary: intermediaryDetails()
           .optional()
-          .describe("Legal details of the contractor (the intermediary). Required unless parentId is set."),
+          .describe("Юридические реквизиты исполнителя (посредника). Обязательны, если не задан parentId."),
       },
     },
     async ({
@@ -226,23 +226,23 @@ export function registerOrdTools(server: McpServer, client: AvitoAdsClient): voi
   server.registerTool(
     "list_contracts",
     {
-      title: "List contracts",
+      title: "Список договоров",
       annotations: READ_ONLY,
       description:
-        "Returns one page of contracts registered under the account: {total, items, page, limit, hasNextPage} plus apiPointBalance (weekly API points left). Each item carries id, type, number, date, subject, object (the contract action), cid, description (the counterparty type), parentId (set on additional agreements) and the client/contractor legal details. Narrow the page with filter.ids / filter.numbers / filter.clients (advertiser ids) / filter.contractors. limit is 1..100 (default 20); page is 1-based.",
+        "Возвращает одну страницу договоров, зарегистрированных под аккаунтом: {total, items, page, limit, hasNextPage} плюс apiPointBalance (остаток недельных баллов API). В каждом элементе id, type, number, date, subject, object (действие по договору), cid, description (тип контрагента), parentId (заполнен у дополнительных соглашений) и юридические реквизиты клиента и исполнителя. Сузить выдачу можно через filter.ids / filter.numbers / filter.clients (id рекламодателей) / filter.contractors. limit — 1..100 (по умолчанию 20); нумерация page с 1.",
       inputSchema: {
         filter: z
           .object({
-            ids: entityIds().optional().describe("Only these contract ids."),
-            numbers: z.array(z.string()).optional().describe("Only contracts with these contract numbers."),
-            clients: entityIds().optional().describe("Only contracts whose client is one of these advertiser ids."),
-            contractors: entityIds().optional().describe("Only contracts with these contractor (intermediary) ids."),
+            ids: entityIds().optional().describe("Только договоры с этими id."),
+            numbers: z.array(z.string()).optional().describe("Только договоры с этими номерами."),
+            clients: entityIds().optional().describe("Только договоры, клиент которых — один из этих рекламодателей (по id)."),
+            contractors: entityIds().optional().describe("Только договоры с этими исполнителями (посредниками) по id."),
           })
           .passthrough()
           .optional()
-          .describe("Filter for the page. Omit for all contracts."),
-        limit: pageLimit().optional().describe("Page size, 1..100. Default 20."),
-        page: pageNumber().optional().describe("1-based page number. Default 1."),
+          .describe("Фильтр страницы. Без него возвращаются все договоры."),
+        limit: pageLimit().optional().describe("Размер страницы, 1..100. По умолчанию 20."),
+        page: pageNumber().optional().describe("Номер страницы, нумерация с 1. По умолчанию 1."),
       },
     },
     async ({ filter, limit, page }) => {

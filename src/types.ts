@@ -494,7 +494,7 @@ export class ValidationError extends Error {
 
 /** Turns a parsed API error body into a short, readable message. */
 function formatErrorBody(body: unknown): string {
-  if (body == null) return "(no body)";
+  if (body == null) return "(пустое тело)";
   if (typeof body === "string") return body.slice(0, 500);
   if (typeof body !== "object") return String(body);
   const obj = body as Record<string, unknown>;

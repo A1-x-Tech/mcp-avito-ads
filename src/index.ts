@@ -23,18 +23,20 @@ import { registerRawTool } from "./tools/raw.js";
  * that is not already proven in the repo.
  */
 const INSTRUCTIONS =
-  "Avito Ads (Avito Reklama) is the advertising cabinet for display and performance campaigns — not " +
-  "the Avito seller API: listings, chats and orders need other credentials. The ad account is fixed " +
-  "by AVITO_ADS_ACCOUNT_ID; no tool can override it. Campaigns, ad groups and creatives are " +
-  "read-only — no create, edit, pause or delete, and no targeting — and the only writable fields in " +
-  "the ad tree are one group's budget and bid; advertisers and contracts are append-only. Metering " +
-  "is a weekly point budget (one point per call, refilled Mondays 00:00 UTC), not a rate limit; " +
-  "every result carries the apiPointBalance left — pace by it: one wide statistics period (100 days " +
-  "max) beats several narrow ones, limit up to 100 beats pages of 20. A bare 403 with no message " +
-  "means AVITO_ADS_ACCOUNT_ID is not the account the key was issued for, not missing rights; 401 is " +
-  "the credentials. Transfers move real money, cannot be undone and leave no log: after an unclear " +
-  "failure check list_child_accounts_with_balances rather than repeating one. " +
-  "AVITO_ADS_ENVIRONMENT=sandbox switches to a test API with its own points.";
+  "Авито Реклама — рекламный кабинет медийных и performance-кампаний, а не API продавца Авито: " +
+  "для товарных объявлений, чатов и заказов нужны другие учётные данные. Рекламный аккаунт задан " +
+  "в AVITO_ADS_ACCOUNT_ID, ни один инструмент его не переопределяет. Кампании, группы объявлений " +
+  "и креативы доступны только на чтение — без создания, изменения, приостановки и удаления, " +
+  "таргетинга нет, — а единственные изменяемые поля в дереве объявлений это бюджет и ставка " +
+  "группы; рекламодатели и договоры только добавляются. Учёт вызовов — недельная квота баллов " +
+  "(балл за вызов, пополняется по понедельникам в 00:00 UTC), а не лимит запросов; каждый ответ " +
+  "несёт остаток apiPointBalance, и по нему стоит рассчитывать вызовы: один широкий период " +
+  "статистики (максимум 100 дней) лучше нескольких узких, limit до 100 лучше страниц по 20. " +
+  "Пустой 403 без сообщения — это не нехватка прав, а признак того, что AVITO_ADS_ACCOUNT_ID не " +
+  "тот аккаунт, для которого выдан ключ; 401 — это учётные данные. Переводы двигают реальные " +
+  "деньги, необратимы и не оставляют журнала: после неясного сбоя стоит проверить " +
+  "list_child_accounts_with_balances, а не повторять перевод. AVITO_ADS_ENVIRONMENT=sandbox " +
+  "переключает на тестовый API с собственными баллами.";
 
 /** Reads the package version so the server reports its real version to MCP clients. */
 function readVersion(): string {
@@ -57,7 +59,7 @@ async function loadConfigOrExit(telemetry: Telemetry): Promise<AvitoAdsConfig> {
     return loadConfig();
   } catch (err) {
     if (!(err instanceof ConfigError)) throw err;
-    console.error(`Error: ${err.message}`);
+    console.error(`Ошибка: ${err.message}`);
     await telemetry.sendBlocking("startup_failed", { reason: err.reason });
     process.exit(1);
   }
@@ -100,10 +102,10 @@ async function main(): Promise<void> {
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error(`mcp-avito-ads running on stdio (account ${config.accountId}, ${config.environment})`);
+  console.error(`mcp-avito-ads работает через stdio (аккаунт ${config.accountId}, ${config.environment})`);
 }
 
 main().catch((err) => {
-  console.error("Fatal error starting mcp-avito-ads:", err);
+  console.error("Критическая ошибка запуска mcp-avito-ads:", err);
   process.exit(1);
 });

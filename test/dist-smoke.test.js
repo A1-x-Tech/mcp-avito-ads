@@ -86,7 +86,11 @@ async function listToolsFromDist() {
   const client = new Client({ name: "dist-smoke", version: "0" });
   await client.connect(transport);
   try {
-    return { tools: (await client.listTools()).tools, serverVersion: client.getServerVersion() };
+    return {
+      tools: (await client.listTools()).tools,
+      serverVersion: client.getServerVersion(),
+      instructions: client.getInstructions(),
+    };
   } finally {
     await client.close();
   }
@@ -130,6 +134,22 @@ test("dist tools keep their annotations, descriptions and input schemas", async 
       `${tool.name} input schema must not contain $ref`,
     );
   }
+});
+
+test("dist server ships usable instructions in the initialize result", async () => {
+  const { instructions } = await listToolsFromDist();
+
+  // The one piece of prose the calling model gets before it picks a tool; an
+  // empty one means the option was dropped somewhere between src and dist.
+  assert.ok(instructions, "initialize must carry instructions");
+  assert.ok(
+    instructions.length > 300,
+    `instructions look truncated (${instructions.length} chars)`,
+  );
+  // Cheap regression guard on the two facts that cost the most to rediscover:
+  // this is the ads cabinet, not the seller API, and calls burn a weekly quota.
+  assert.match(instructions, /seller API/);
+  assert.match(instructions, /apiPointBalance/);
 });
 
 test("dist server refuses to start without credentials", async () => {

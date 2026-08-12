@@ -14,6 +14,28 @@ import { registerStatisticsTools } from "./tools/statistics.js";
 import { registerUserTools } from "./tools/users.js";
 import { registerRawTool } from "./tools/raw.js";
 
+/**
+ * Prose handed to the calling model in the `initialize` result, before it picks
+ * a tool. It carries only what the tool list cannot: which Avito API this is
+ * (the ads cabinet, not the seller API everyone confuses it with), where the
+ * surface ends, what a call costs, and what a bare 403 actually means. It is
+ * prepended to every session's context, so it stays short and states no fact
+ * that is not already proven in the repo.
+ */
+const INSTRUCTIONS =
+  "Avito Ads (Avito Reklama) is the advertising cabinet for display and performance campaigns — not " +
+  "the Avito seller API: listings, chats and orders need other credentials. The ad account is fixed " +
+  "by AVITO_ADS_ACCOUNT_ID; no tool can override it. Campaigns, ad groups and creatives are " +
+  "read-only — no create, edit, pause or delete, and no targeting — and the only writable fields in " +
+  "the ad tree are one group's budget and bid; advertisers and contracts are append-only. Metering " +
+  "is a weekly point budget (one point per call, refilled Mondays 00:00 UTC), not a rate limit; " +
+  "every result carries the apiPointBalance left — pace by it: one wide statistics period (100 days " +
+  "max) beats several narrow ones, limit up to 100 beats pages of 20. A bare 403 with no message " +
+  "means AVITO_ADS_ACCOUNT_ID is not the account the key was issued for, not missing rights; 401 is " +
+  "the credentials. Transfers move real money, cannot be undone and leave no log: after an unclear " +
+  "failure check list_child_accounts_with_balances rather than repeating one. " +
+  "AVITO_ADS_ENVIRONMENT=sandbox switches to a test API with its own points.";
+
 /** Reads the package version so the server reports its real version to MCP clients. */
 function readVersion(): string {
   try {
@@ -52,10 +74,15 @@ async function main(): Promise<void> {
   // package version; Avito sees an identified client instead of Node's "node".
   const client = new AvitoAdsClient({ ...config, userAgent: `mcp-avito-ads/${version}` });
 
-  const server = new McpServer({
-    name: "mcp-avito-ads",
-    version,
-  });
+  const server = new McpServer(
+    {
+      name: "mcp-avito-ads",
+      version,
+    },
+    // `instructions` rides in the initialize result, so the model reads it once
+    // per session before any tool call — the only prose it is guaranteed to see.
+    { instructions: INSTRUCTIONS },
+  );
 
   instrumentToolCalls(server, telemetry);
   server.server.oninitialized = () => {

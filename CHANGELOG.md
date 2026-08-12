@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.2] — 2026-08-12
+
+### Added
+
+- Server instructions. The MCP `initialize` response now carries a short briefing for the calling
+  model: what this API is and is not, what it cannot do, and the quotas, retry rules and misleading
+  failures that should change how it is used. That knowledge previously lived only in the README,
+  which a model never reads.
+
 ## [1.0.1] — 2026-08-11
 
 First release verified against a live Avito Ads cabinet. Thirteen of the twenty-five tools were
@@ -80,7 +89,8 @@ exercised end to end; the wire protocol, derived from the official SDK, needed n
 - Documentation: `README.md`, `docs/TOOLS.md`, `docs/DEVELOPMENT.md`, `docs/PUBLISHING.md`,
   `CLAUDE.md`.
 
-[Unreleased]: https://github.com/A1-x-Tech/mcp-avito-ads/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/A1-x-Tech/mcp-avito-ads/compare/v1.0.2...HEAD
+[1.0.2]: https://github.com/A1-x-Tech/mcp-avito-ads/releases/tag/v1.0.2
 [1.0.1]: https://github.com/A1-x-Tech/mcp-avito-ads/releases/tag/v1.0.1
 [1.0.0]: https://github.com/A1-x-Tech/mcp-avito-ads/releases/tag/v1.0.0
 [0.1.0]: https://github.com/A1-x-Tech/mcp-avito-ads/releases/tag/v0.1.0

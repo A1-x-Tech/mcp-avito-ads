@@ -21,8 +21,12 @@ export function isReadMethod(method: string): boolean {
  * Substitution alone is not the guard: a path that spells another account id
  * out in full is rejected by the client's `resolve`, which checks the *resolved*
  * path and so cannot be dodged with `..`.
+ *
+ * On a degraded start the account id is undefined; the substitution result is
+ * moot then, because `client.request` rejects the call with CredentialsError
+ * before the path is ever resolved.
  */
-export function expandAccountPath(path: string, accountId: number): string {
+export function expandAccountPath(path: string, accountId: number | undefined): string {
   return path.replace(/\{account_?id\}/gi, String(accountId));
 }
 

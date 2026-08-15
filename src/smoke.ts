@@ -13,7 +13,7 @@
  */
 import { AvitoAdsClient } from "./client.js";
 import { ConfigError, loadConfig } from "./config.js";
-import { AvitoAdsError, type ApiResponse } from "./types.js";
+import { AvitoAdsError, CredentialsError, type ApiResponse } from "./types.js";
 
 /** Last balance the API reported, so the summary line can show where we landed. */
 let lastBalance: number | null = null;
@@ -49,8 +49,10 @@ async function main(): Promise<void> {
 }
 
 main().catch((err) => {
-  // Missing credentials are a user error, not a bug: report them without a stack.
-  if (err instanceof ConfigError) {
+  // Missing or malformed credentials are a user error, not a bug: report them
+  // without a stack. (Missing ones no longer fail loadConfig — they surface as
+  // a CredentialsError on the first call instead.)
+  if (err instanceof ConfigError || err instanceof CredentialsError) {
     console.error(`Проверку не запустить: ${err.message}`);
     console.error(
       "Нужно задать AVITO_ADS_CLIENT_ID, AVITO_ADS_CLIENT_SECRET и AVITO_ADS_ACCOUNT_ID " +

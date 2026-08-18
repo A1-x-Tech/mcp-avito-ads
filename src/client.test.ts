@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import { AvitoAdsClient, backoffMs, normalizeListRequest, validateContractInput } from "./client.js";
-import { AvitoAdsError, ValidationError } from "./types.js";
+import { AvitoAdsError, CredentialsError, ValidationError } from "./types.js";
 import type { AvitoAdsConfig, ContractInput } from "./types.js";
 
 const BASE = "https://api.avito.ru/ads/";
@@ -196,6 +196,67 @@ test("the token endpoint follows the api base, so a mock server serves both", as
   await h.client.getBalance();
   assert.equal(h.calls[0].url, "http://127.0.0.1:8080/token");
   assert.equal(h.calls[1].url, "http://127.0.0.1:8080/ads/v1/account/777/balance");
+});
+
+// --- Missing credentials (degraded start) ---
+
+// The exact startup-era texts, relayed verbatim at call time — pinned so a
+// reworded message does not silently change what the model tells the user.
+const MISSING_CLIENT_ID_TEXT = "Требуется AVITO_ADS_CLIENT_ID — client id приложения Авито (OAuth2).";
+const MISSING_CLIENT_SECRET_TEXT = "Требуется AVITO_ADS_CLIENT_SECRET — client secret приложения Авито (OAuth2).";
+const MISSING_ACCOUNT_ID_TEXT =
+  "Требуется AVITO_ADS_ACCOUNT_ID — рекламный аккаунт, которому принадлежат учётные данные.";
+
+/** Asserts the rejection is a CredentialsError opening with `expected` verbatim. */
+function credentialsErrorWith(expected: string): (err: unknown) => boolean {
+  return (err: unknown) => {
+    assert.ok(err instanceof CredentialsError, "must be a CredentialsError");
+    assert.equal((err as Error).name, "CredentialsError");
+    assert.ok(
+      (err as Error).message.startsWith(expected),
+      `message must open with the historical startup text, got: ${(err as Error).message}`,
+    );
+    assert.match((err as Error).message, /перезапустите сервер/, "the fix must mention the restart");
+    return true;
+  };
+}
+
+test("a missing client id rejects the call with the historical text; fetch is never called", async () => {
+  const h = okHarness({}, {}, { clientId: undefined });
+  await assert.rejects(() => h.client.getBalance(), credentialsErrorWith(MISSING_CLIENT_ID_TEXT));
+  // Not transport trouble: the retry/backoff branch, the token mint and fetch
+  // itself must never run for a configuration problem.
+  assert.equal(h.calls.length, 0, "fetch must not be called at all — not even for the token");
+});
+
+test("a missing client secret rejects the call with the historical text; fetch is never called", async () => {
+  const h = okHarness({}, {}, { clientSecret: undefined });
+  await assert.rejects(() => h.client.getBalance(), credentialsErrorWith(MISSING_CLIENT_SECRET_TEXT));
+  assert.equal(h.calls.length, 0, "fetch must not be called at all — not even for the token");
+});
+
+test("a missing account id rejects the call with the historical text; fetch is never called", async () => {
+  const h = okHarness({}, {}, { accountId: undefined });
+  await assert.rejects(() => h.client.listCampaigns(), credentialsErrorWith(MISSING_ACCOUNT_ID_TEXT));
+  assert.equal(h.calls.length, 0, "fetch must not be called at all — not even for the token");
+});
+
+test("with every credential missing, one combined message names all three variables", async () => {
+  const h = okHarness({}, {}, { clientId: undefined, clientSecret: undefined, accountId: undefined });
+  await assert.rejects(
+    () => h.client.getBalance(),
+    (err: unknown) => {
+      assert.ok(err instanceof CredentialsError, "must be a CredentialsError");
+      const message = (err as Error).message;
+      assert.match(message, /^Требуются /, "several variables fold into one combined message");
+      assert.match(message, /AVITO_ADS_CLIENT_ID/);
+      assert.match(message, /AVITO_ADS_CLIENT_SECRET/);
+      assert.match(message, /AVITO_ADS_ACCOUNT_ID/);
+      assert.match(message, /перезапустите сервер/);
+      return true;
+    },
+  );
+  assert.equal(h.calls.length, 0, "fetch must not be called without credentials");
 });
 
 // --- Point balance ---

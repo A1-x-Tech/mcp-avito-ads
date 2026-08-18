@@ -24,32 +24,58 @@ npm run smoke      # live READ-ONLY calls (needs the three required env vars; sp
 
 ## Architecture
 
-- `src/config.ts` — env → config; throws `ConfigError` (with a `reason` code) instead of exiting,
-  so `index.ts` can report the drop-off before dying. Requires `AVITO_ADS_CLIENT_ID`,
-  `AVITO_ADS_CLIENT_SECRET`, `AVITO_ADS_ACCOUNT_ID` (digits only — a truncated id would address
-  someone else's account); optional `AVITO_ADS_ENVIRONMENT`, `AVITO_ADS_TIMEOUT_MS`,
-  `AVITO_ADS_MAX_RETRIES`, `AVITO_ADS_TOKEN_LEEWAY_SECONDS`, `AVITO_ADS_API_BASE`.
+- `src/config.ts` — env → config. Missing `AVITO_ADS_CLIENT_ID` / `AVITO_ADS_CLIENT_SECRET` /
+  `AVITO_ADS_ACCOUNT_ID` (empty string = absent) is NOT an error: the fields stay `undefined`,
+  the server starts degraded and the client raises `CredentialsError` (lives in `types.ts`) at
+  call time. `ConfigError` (with a `reason` code) is reserved for malformed values —
+  `invalid_account_id` (digits only + safe integer: a truncated id would address someone else's
+  account) and `invalid_environment` — and is caught by `loadConfigOrDegraded` in `index.ts`.
+  Optional `AVITO_ADS_ENVIRONMENT`, `AVITO_ADS_TIMEOUT_MS`, `AVITO_ADS_MAX_RETRIES`,
+  `AVITO_ADS_TOKEN_LEEWAY_SECONDS`, `AVITO_ADS_API_BASE`.
 - `src/types.ts` — config, wire types, the enum tuples (`CAMPAIGN_STATUSES`, `CONTRACT_TYPES`, …)
   the tools build zod enums from, `ApiResponse<T> = {data, apiPointBalance}`, `AvitoAdsError`,
   `ValidationError`. Field names mirror the API's inconsistent casing (`accountID` here,
   `accountId` there) — do not "fix" them.
 - `src/client.ts` — one token cached in memory (concurrent callers share one in-flight request,
-  refreshed `tokenLeewaySeconds` early, dropped and re-minted once on a 401). `request()` resolves
-  the path against the base and rejects anything that escapes it (SSRF guard), enforces an
-  AbortController timeout that also covers reading the body, retries with backoff, and lifts
-  `Api-Point-Balance` into the envelope. Also holds the pre-flight validators:
+  refreshed `tokenLeewaySeconds` early, dropped and re-minted once on a 401). `request()` first
+  rejects a missing credential with `CredentialsError` (before the token mint, the retries and
+  fetch — the message is the product: one missing variable keeps its historical startup text
+  verbatim, several fold into one combined «Требуются …», and both name the needed restart),
+  then resolves the path against the base and rejects anything that escapes it (SSRF guard),
+  enforces an AbortController timeout that also covers reading the body, retries with backoff,
+  and lifts `Api-Point-Balance` into the envelope. Also holds the pre-flight validators:
   `validateContractInput`, `assertPeriod` (100-day cap), `assertAmount`, `normalizeListRequest`.
 - `src/tools/*.ts` — `account`, `child-accounts`, `ord`, `catalog`, `statistics`, `users`, `raw`;
   each exports one `register*Tools(server, client)`. `tools/util.ts` — `ok`/`fail`, the annotation
   presets and the shared zod schema **factories**.
-- `src/index.ts` — wires every `register*` into the McpServer.
+- `src/index.ts` — wires every `register*` into the McpServer. `loadConfigOrDegraded()` catches
+  `ConfigError`, pings `startup_failed` (fire-and-forget) and degrades the config to
+  "no credentials" over the production base; an unconfigured start prepends `UNCONFIGURED_PREFIX`
+  — plus `Проблема конфигурации: <message>` when a ConfigError was caught — to the initialize
+  `instructions`, and `oninitialized` sends `server_start` for a configured install or
+  `unconfigured_start` (with the reason) otherwise.
 - `src/telemetry.ts` — anonymous usage pings (ids/names/versions only, never data or arguments;
-  fire-and-forget, must never block or throw; opt-out `ASKADS_TELEMETRY=0`). `startup_failed` is
-  the exception: `sendBlocking` awaits it, because the caller exits right after. Its `reason` is a
-  closed vocabulary (`missing_client_id`, …) — never a variable's name or value.
+  fire-and-forget, must never block or throw; opt-out `ASKADS_TELEMETRY=0`). `server_start` means
+  "a usable install started"; `unconfigured_start` is a degraded start and `startup_failed` a
+  malformed config caught at load — both carry a `reason` from a closed vocabulary
+  (`missing_client_id`, `missing_client_secret`, `missing_account_id`, `invalid_account_id`,
+  `invalid_environment`) — never a variable's name or value.
 
 ## Conventions (do not break)
 
+- **Never exit because of configuration.** A server that dies before the MCP handshake leaves
+  the user with a red cross and no reason — telemetry across this line of servers showed that
+  state accounted for nearly every unconfigured install, and almost none of them recovered.
+  Missing credentials are a survivable state: start, answer `initialize` (with the unconfigured
+  prefix in `instructions`) and `tools/list`, and let every tool call fail with
+  `CredentialsError` — its message names the variables to set and says to restart, because
+  credentials come only from the environment (there are no login tools). A malformed value
+  degrades the same way, with its `ConfigError` message carried into the instructions.
+  `config.test.ts`, `client.test.ts` and `test/dist-smoke.test.js` pin this.
+- **Credential failures are not transport failures.** `CredentialsError` is thrown before the
+  token mint, the retry/backoff branch and fetch itself in the client's `send()` — retrying it
+  burns seconds of backoff (and could burn API points) before the user sees the one message that
+  helps. Pinned by "fetch must not be called" assertions in `client.test.ts`.
 - **The account id is config, never an argument.** No tool takes one; the client injects it into
   every path. `transfer_funds` / `transfer_bonus` take only the destination, and `client.resolve`
   refuses a `raw_request` path that names another account (checked on the *resolved* path, so `..`

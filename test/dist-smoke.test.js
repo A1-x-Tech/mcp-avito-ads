@@ -152,19 +152,77 @@ test("dist server ships usable instructions in the initialize result", async () 
   assert.match(instructions, /apiPointBalance/);
 });
 
-test("dist server refuses to start without credentials", async () => {
-  const { spawn } = await import("node:child_process");
-  const child = spawn(process.execPath, [ENTRYPOINT], {
-    env: { PATH: process.env.PATH ?? "", ASKADS_TELEMETRY: "0" },
-    stdio: ["pipe", "pipe", "pipe"],
+/**
+ * Handshakes with a dist server spawned over `env` and returns a connected
+ * client. The caller closes it. Used by the degraded-start tests below, which
+ * never provide credentials — offline: the CredentialsError fires before any
+ * fetch, so no network is touched.
+ */
+async function connectToDist(env, name) {
+  const transport = new StdioClientTransport({
+    command: process.execPath,
+    args: [ENTRYPOINT],
+    env: { PATH: process.env.PATH ?? "", ASKADS_TELEMETRY: "0", ...env },
+    stderr: "ignore",
   });
+  const client = new Client({ name, version: "0" });
+  await client.connect(transport);
+  return client;
+}
 
-  let stderr = "";
-  child.stderr.on("data", (chunk) => {
-    stderr += String(chunk);
-  });
-  const code = await new Promise((resolve) => child.on("close", resolve));
+/**
+ * The degraded-start contract: without any credentials the binary used to
+ * exit(1) before the handshake, leaving the client a dead server and no reason.
+ * It must now start, list every tool, open the instructions with the fix, and
+ * answer a tool call with the actionable error.
+ */
+test("dist server starts without credentials: handshake, tool list, actionable call error", async () => {
+  const client = await connectToDist({}, "dist-smoke-unconfigured");
+  try {
+    // The model must read the fix before it picks a tool.
+    const instructions = client.getInstructions() ?? "";
+    assert.match(instructions, /ещё не подключена/);
+    assert.match(instructions, /AVITO_ADS_CLIENT_ID/);
+    assert.match(instructions, /перезапустить сервер/);
 
-  assert.equal(code, 1);
-  assert.match(stderr, /Требуется AVITO_ADS_CLIENT_ID/);
+    const { tools } = await client.listTools();
+    assert.deepEqual(tools.map((tool) => tool.name).sort(), Object.keys(EXPECTED).sort());
+
+    // A tool call fails with the exact message instead of killing the server.
+    const result = await client.callTool({ name: "get_balance", arguments: {} });
+    assert.equal(result.isError, true);
+    const text = result.content.map((c) => c.text ?? "").join(" ");
+    assert.match(text, /Требуются AVITO_ADS_CLIENT_ID/);
+    assert.match(text, /AVITO_ADS_CLIENT_SECRET/);
+    assert.match(text, /AVITO_ADS_ACCOUNT_ID/);
+    assert.match(text, /перезапустите сервер/);
+  } finally {
+    await client.close();
+  }
+});
+
+test("dist server survives a malformed account id and carries the problem into the instructions", async () => {
+  const client = await connectToDist(
+    {
+      AVITO_ADS_CLIENT_ID: "test-client-id",
+      AVITO_ADS_CLIENT_SECRET: "test-client-secret",
+      AVITO_ADS_ACCOUNT_ID: "12abc",
+    },
+    "dist-smoke-malformed",
+  );
+  try {
+    // The malformed value degrades the config to "no credentials": the problem
+    // itself is reported in the instructions, and a call answers with the
+    // missing-variable message — the fix is the same either way: correct the
+    // value and restart.
+    const instructions = client.getInstructions() ?? "";
+    assert.match(instructions, /Проблема конфигурации: AVITO_ADS_ACCOUNT_ID должен быть положительным целым числом/);
+
+    const result = await client.callTool({ name: "get_balance", arguments: {} });
+    assert.equal(result.isError, true);
+    const text = result.content.map((c) => c.text ?? "").join(" ");
+    assert.match(text, /AVITO_ADS_ACCOUNT_ID/);
+  } finally {
+    await client.close();
+  }
 });

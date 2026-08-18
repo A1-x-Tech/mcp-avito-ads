@@ -54,9 +54,11 @@ so those failure modes cost nothing.
 
 ## Usage telemetry
 
-The server sends anonymous events to `usage.gistrec.cloud` (`server_start` when a client connects,
-`tool_call` with the tool **name**, and `startup_failed` with a machine-readable reason code when
-credentials are missing) so we can count active installs and see which tools matter. An event
+The server sends anonymous events to `usage.gistrec.cloud` (`server_start` when a client connects
+to a configured install, `unconfigured_start` when a client connects to a server without
+credentials, `tool_call` with the tool **name**, and `startup_failed` with a machine-readable
+reason code when the configuration is malformed) so we can count active installs and see which
+tools matter. An event
 carries only impersonal technical fields: a random install id
 (`~/.config/mcp-avito-ads/instance-id`), the package version, the AI application's name and
 version from the MCP handshake, the Node.js version and the OS.

@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **The server no longer exits because of configuration.** Missing `AVITO_ADS_CLIENT_ID` /
+  `AVITO_ADS_CLIENT_SECRET` / `AVITO_ADS_ACCOUNT_ID` is a survivable state: the server starts,
+  completes the MCP handshake, serves the full tool list and opens the `initialize` instructions
+  with the fix (which variables to set, and that the server must be restarted afterwards —
+  credentials are read from the environment only at startup). A tool call then fails with the
+  historical startup error verbatim (`CredentialsError`, an `isError` result; one combined
+  message when several variables are missing) before any request is built — no retries, no token
+  mint, no network. A malformed value (`invalid_account_id`, `invalid_environment`) still reports
+  its `ConfigError`, but degrades the same way — the message is carried into the instructions —
+  instead of killing the process before the handshake.
+
+### Added
+
+- Telemetry event `unconfigured_start` (with the same closed reason vocabulary:
+  `missing_client_id`, `missing_client_secret`, `missing_account_id`): a server without
+  credentials now survives to the MCP handshake, so a degraded start is counted separately
+  instead of inflating `server_start` or dying as `startup_failed`. `startup_failed` remains for
+  malformed values and is now fire-and-forget — nothing blocks startup anymore.
+
 ## [1.0.2] — 2026-08-12
 
 ### Added

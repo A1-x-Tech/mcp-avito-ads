@@ -23,7 +23,7 @@ import type {
   User,
   UserRole,
 } from "./types.js";
-import { AvitoAdsError, USER_ROLES, ValidationError } from "./types.js";
+import { AvitoAdsError, CredentialsError, USER_ROLES, ValidationError } from "./types.js";
 
 export type HttpMethod = "GET" | "POST" | "DELETE";
 
@@ -45,6 +45,48 @@ const MIN_AMOUNT = 1;
 export const DEFAULT_USER_AGENT = "mcp-avito-ads";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Call-time texts for missing credentials — formerly the startup errors that
+ * killed the process before the MCP handshake, preserved verbatim (pinned in
+ * client.test.ts). The message is the product: it is what the calling model
+ * relays to the user, so it names the variable to set and says the server
+ * needs a restart — credentials come only from the environment.
+ */
+const MISSING_CLIENT_ID_TEXT = "Требуется AVITO_ADS_CLIENT_ID — client id приложения Авито (OAuth2).";
+const MISSING_CLIENT_SECRET_TEXT = "Требуется AVITO_ADS_CLIENT_SECRET — client secret приложения Авито (OAuth2).";
+const MISSING_ACCOUNT_ID_TEXT =
+  "Требуется AVITO_ADS_ACCOUNT_ID — рекламный аккаунт, которому принадлежат учётные данные.";
+
+/** The same variables as list items for the combined «Требуются X, Y и Z» message. */
+const LISTED_CLIENT_ID = "AVITO_ADS_CLIENT_ID (client id приложения Авито, OAuth2)";
+const LISTED_CLIENT_SECRET = "AVITO_ADS_CLIENT_SECRET (client secret приложения Авито, OAuth2)";
+const LISTED_ACCOUNT_ID = "AVITO_ADS_ACCOUNT_ID (рекламный аккаунт, которому принадлежат учётные данные)";
+
+/**
+ * The full CredentialsError message for this config, or undefined when every
+ * credential is present. One missing variable keeps its historical startup
+ * text verbatim; several are folded into one combined message so the user
+ * fixes them all in one restart instead of discovering them one by one.
+ */
+function missingCredentialsMessage(config: AvitoAdsConfig): string | undefined {
+  const missing: Array<{ single: string; listed: string }> = [];
+  if (!config.clientId) missing.push({ single: MISSING_CLIENT_ID_TEXT, listed: LISTED_CLIENT_ID });
+  if (!config.clientSecret) missing.push({ single: MISSING_CLIENT_SECRET_TEXT, listed: LISTED_CLIENT_SECRET });
+  if (config.accountId === undefined) missing.push({ single: MISSING_ACCOUNT_ID_TEXT, listed: LISTED_ACCOUNT_ID });
+  if (missing.length === 0) return undefined;
+
+  const listed = missing.map((m) => m.listed);
+  const what =
+    missing.length === 1
+      ? missing[0].single
+      : `Требуются ${listed.slice(0, -1).join(", ")} и ${listed[listed.length - 1]}.`;
+  const fix =
+    " Это не сбой сети — повторный вызов не поможет: задайте " +
+    (missing.length === 1 ? "переменную окружения" : "переменные окружения") +
+    " в конфигурации MCP-клиента и перезапустите сервер.";
+  return what + fix;
+}
 
 /** Statistics period, shared by the three stats endpoints. */
 export interface StatsPeriod {
@@ -204,8 +246,12 @@ export class AvitoAdsClient {
     this.userAgent = config.userAgent ?? DEFAULT_USER_AGENT;
   }
 
-  /** The ad account every path is scoped to (from config, never from a tool). */
-  get accountId(): number {
+  /**
+   * The ad account every path is scoped to (from config, never from a tool),
+   * or undefined on a degraded start — no request leaves the client then:
+   * {@link send} rejects the call with CredentialsError first.
+   */
+  get accountId(): number | undefined {
     return this.config.accountId;
   }
 
@@ -243,10 +289,17 @@ export class AvitoAdsClient {
   }
 
   private async fetchToken(): Promise<string> {
+    const { clientId, clientSecret } = this.config;
+    // send() rejects a missing credential before minting; repeated here, where
+    // the types demand it, so no future caller can post blanks to the token
+    // endpoint either.
+    if (!clientId || !clientSecret) {
+      throw new CredentialsError(missingCredentialsMessage(this.config) ?? MISSING_CLIENT_ID_TEXT);
+    }
     const body = new URLSearchParams({
       grant_type: "client_credentials",
-      client_id: this.config.clientId,
-      client_secret: this.config.clientSecret,
+      client_id: clientId,
+      client_secret: clientSecret,
     }).toString();
 
     const { res, text } = await this.fetchWithTimeout(
@@ -323,6 +376,13 @@ export class AvitoAdsClient {
     body: unknown,
     retryUnsafe: boolean,
   ): Promise<ApiResponse<T>> {
+    // A missing credential is rejected before the request is built, the OAuth2
+    // token is minted, or anything is retried or fetched: it is a configuration
+    // problem, not transport trouble, so it must never enter the retry/backoff
+    // branch below — and fetch never fires at all (pinned in client.test.ts).
+    const missing = missingCredentialsMessage(this.config);
+    if (missing) throw new CredentialsError(missing);
+
     const target = this.resolve(path);
     const payload = body === undefined ? undefined : JSON.stringify(body);
 

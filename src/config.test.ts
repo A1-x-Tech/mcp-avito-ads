@@ -1,11 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { ConfigError, loadConfig } from "./config.js";
+import { ConfigError, hasCredentials, loadConfig } from "./config.js";
 
 /**
- * The reason codes below are the vocabulary the dashboard groups by — renaming
- * one silently splits a bar in two, so they are pinned here.
+ * The reason codes below (`invalid_*`) are the vocabulary the dashboard groups
+ * by — renaming one silently splits a bar in two, so they are pinned here.
  */
 const FULL = {
   AVITO_ADS_CLIENT_ID: "cid",
@@ -28,16 +28,46 @@ function reasonOf(env: Record<string, string | undefined>): string {
   return errorOf(env).reason;
 }
 
-test("each missing credential reports its own reason", () => {
-  assert.equal(reasonOf({ ...FULL, AVITO_ADS_CLIENT_ID: undefined }), "missing_client_id");
-  assert.equal(reasonOf({ ...FULL, AVITO_ADS_CLIENT_SECRET: undefined }), "missing_client_secret");
-  assert.equal(reasonOf({ ...FULL, AVITO_ADS_ACCOUNT_ID: undefined }), "missing_account_id");
-  assert.equal(reasonOf({ ...FULL, AVITO_ADS_ACCOUNT_ID: "   " }), "missing_account_id");
+/**
+ * Missing credentials used to throw here, which killed the process before the
+ * MCP handshake and left the user with a dead server and no reason. It is now
+ * a survivable state: the server starts degraded and the client raises
+ * CredentialsError at call time instead (pinned in client.test.ts). Reverting
+ * this would restore that dead end.
+ */
+test("a missing credential does not throw — the field stays undefined", () => {
+  assert.equal(loadConfig({ ...FULL, AVITO_ADS_CLIENT_ID: undefined } as NodeJS.ProcessEnv).clientId, undefined);
+  assert.equal(
+    loadConfig({ ...FULL, AVITO_ADS_CLIENT_SECRET: undefined } as NodeJS.ProcessEnv).clientSecret,
+    undefined,
+  );
+  assert.equal(loadConfig({ ...FULL, AVITO_ADS_ACCOUNT_ID: undefined } as NodeJS.ProcessEnv).accountId, undefined);
+});
+
+test("an empty or blank value is treated as absent, not as an empty credential", () => {
+  const config = loadConfig({
+    AVITO_ADS_CLIENT_ID: "",
+    AVITO_ADS_CLIENT_SECRET: "",
+    AVITO_ADS_ACCOUNT_ID: "   ",
+  } as NodeJS.ProcessEnv);
+  assert.equal(config.clientId, undefined);
+  assert.equal(config.clientSecret, undefined);
+  assert.equal(config.accountId, undefined);
+  assert.equal(hasCredentials(config), false);
+});
+
+test("with no variables at all the config loads with production defaults intact", () => {
+  const config = loadConfig({} as NodeJS.ProcessEnv);
+  assert.equal(hasCredentials(config), false);
+  assert.equal(config.environment, "production");
+  assert.equal(config.apiBase, "https://api.avito.ru/ads/");
 });
 
 test("the account id must be a positive integer", () => {
-  // parseInt would happily read "12abc" as 12 and address the wrong account.
-  for (const bad of ["abc", "12abc", "-5", "1.5", "0", "1e5", " 12 3"]) {
+  // parseInt would happily read "12abc" as 12 and address the wrong account;
+  // the 20-digit value pins the safe-integer branch (silent float rounding
+  // would address the wrong account too).
+  for (const bad of ["abc", "12abc", "-5", "1.5", "0", "1e5", " 12 3", "99999999999999999999"]) {
     assert.equal(reasonOf({ ...FULL, AVITO_ADS_ACCOUNT_ID: bad }), "invalid_account_id", bad);
   }
   assert.equal(loadConfig({ ...FULL, AVITO_ADS_ACCOUNT_ID: " 42 " } as NodeJS.ProcessEnv).accountId, 42);
@@ -62,6 +92,7 @@ test("a rejected value is never echoed into the message index.ts prints to stder
 
 test("a fully configured server loads with production defaults", () => {
   const config = loadConfig(FULL as NodeJS.ProcessEnv);
+  assert.equal(hasCredentials(config), true);
   assert.equal(config.clientId, "cid");
   assert.equal(config.clientSecret, "secret");
   assert.equal(config.accountId, 12345);

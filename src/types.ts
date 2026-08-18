@@ -15,12 +15,16 @@
 export type Environment = "production" | "sandbox";
 
 export interface AvitoAdsConfig {
-  /** OAuth2 client id of the Avito application. Treated as a secret. */
-  clientId: string;
-  /** OAuth2 client secret of the Avito application. Treated as a secret. */
-  clientSecret: string;
-  /** Ad account the token is bound to; injected into every path. */
-  accountId: number;
+  /**
+   * OAuth2 client id of the Avito application. Treated as a secret. Optional:
+   * a server without credentials still starts (degraded) and every tool call
+   * answers with {@link CredentialsError} instead.
+   */
+  clientId?: string;
+  /** OAuth2 client secret of the Avito application. Treated as a secret. Optional, as above. */
+  clientSecret?: string;
+  /** Ad account the token is bound to; injected into every path. Optional, as above. */
+  accountId?: number;
   /** Which API environment the base url points at (reported by tools). */
   environment: Environment;
   /** API root, including the environment prefix, e.g. https://api.avito.ru/ads/. */
@@ -489,6 +493,22 @@ export class ValidationError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "ValidationError";
+  }
+}
+
+/**
+ * A tool call arrived while the server runs without credentials (degraded
+ * start). Thrown by the client BEFORE the request is built, the OAuth2 token
+ * is minted or anything is fetched: a missing credential is a configuration
+ * problem, not transport trouble, so it must never enter the retry/backoff
+ * path. The message is the product — it is the only text the calling model
+ * reads about the missing setup, so it names the variables to set and says
+ * the server needs a restart (credentials come only from the environment).
+ */
+export class CredentialsError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "CredentialsError";
   }
 }
 

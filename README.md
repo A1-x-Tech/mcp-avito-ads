@@ -1,8 +1,8 @@
 # <img src="./assets/a1-logo.svg" alt="A1" width="40"> Авито Реклама MCP
 
 [![npm](https://img.shields.io/npm/v/mcp-avito-ads)](https://www.npmjs.com/package/mcp-avito-ads)
-[![CI](https://github.com/A1-x-Tech/mcp-avito-ads/actions/workflows/ci.yml/badge.svg)](https://github.com/A1-x-Tech/mcp-avito-ads/actions/workflows/ci.yml)
 [![Glama](https://glama.ai/mcp/servers/A1-x-Tech/mcp-avito-ads/badges/score.svg)](https://glama.ai/mcp/servers/A1-x-Tech/mcp-avito-ads)
+[![CI](https://github.com/A1-x-Tech/mcp-avito-ads/actions/workflows/ci.yml/badge.svg)](https://github.com/A1-x-Tech/mcp-avito-ads/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
 **A1 Авито Реклама MCP** подключает AI-приложение к рекламному кабинету Авито Рекламы. Он помогает проверить кампании и статистику, управлять бюджетом и ставкой группы, работать с балансами агентства, доступами и документами ОРД — на естественном языке.

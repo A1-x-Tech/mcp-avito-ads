@@ -13,6 +13,7 @@ import { registerCatalogTools } from "./tools/catalog.js";
 import { registerStatisticsTools } from "./tools/statistics.js";
 import { registerUserTools } from "./tools/users.js";
 import { registerRawTool } from "./tools/raw.js";
+import { registerSetupTools } from "./tools/setup.js";
 
 /**
  * Prose handed to the calling model in the `initialize` result, before it picks
@@ -82,9 +83,11 @@ function loadConfigOrDegraded(telemetry: Telemetry): {
   } catch (err) {
     if (!(err instanceof ConfigError)) throw err;
     console.error(`Ошибка конфигурации: ${err.message}`);
-    // Fire-and-forget now that the process survives: the historical
-    // `startup_failed` funnel stays comparable, but nothing blocks startup.
-    telemetry.send("startup_failed", { reason: err.reason });
+    // No `startup_failed` here: the process survives this, and the handshake
+    // path below reports the very same reason as `unconfigured_start`. Sending
+    // both double-counted every malformed start — the telemetry of one Windows
+    // install with quoted values read as 931 failures in two weeks, half of
+    // them this duplicate.
     return {
       // The default production base on purpose: with the environment possibly
       // being the malformed value, production is the only base left to trust —
@@ -151,6 +154,8 @@ async function main(): Promise<void> {
     }
   };
 
+  // Diagnosis first: it is the only tool that works with a broken config.
+  registerSetupTools(server, config, problem);
   registerAccountTools(server, client);
   registerChildAccountTools(server, client);
   registerOrdTools(server, client);

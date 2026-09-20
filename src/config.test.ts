@@ -150,3 +150,34 @@ test("loadConfig defaults to process.env", () => {
     }
   }
 });
+
+test("quoted values are accepted: Windows configs paste the quotes along", () => {
+  // The real-world failure this guards: an MCP config on Windows delivering
+  // the account id with its JSON quotes still attached, which the strict digit
+  // check rejected — 931 dead starts from a single install before this.
+  const config = loadConfig({
+    AVITO_ADS_CLIENT_ID: '"cid"',
+    AVITO_ADS_CLIENT_SECRET: "'secret'",
+    AVITO_ADS_ACCOUNT_ID: '"776478617"',
+  } as NodeJS.ProcessEnv);
+  assert.equal(config.clientId, "cid");
+  assert.equal(config.clientSecret, "secret");
+  assert.equal(config.accountId, 776478617);
+});
+
+test("a stray quote is not silently swallowed: only matching pairs are stripped", () => {
+  assert.throws(
+    () => loadConfig({ AVITO_ADS_ACCOUNT_ID: '"776478617' } as NodeJS.ProcessEnv),
+    /AVITO_ADS_ACCOUNT_ID/,
+  );
+});
+
+test("a client secret pasted into the account id still fails, with the reason named", () => {
+  try {
+    loadConfig({ AVITO_ADS_ACCOUNT_ID: "aB3-xyz_secret" } as NodeJS.ProcessEnv);
+    assert.fail("a non-numeric account id must be rejected");
+  } catch (error) {
+    assert.match(String((error as Error).message), /client secret/);
+    assert.equal((error as { reason?: string }).reason, "invalid_account_id");
+  }
+});

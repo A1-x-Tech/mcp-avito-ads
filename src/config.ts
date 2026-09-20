@@ -28,6 +28,26 @@ export class ConfigError extends Error {
   }
 }
 
+/**
+ * Strips one layer of matching quotes around a pasted value.
+ *
+ * Windows is where this bites: a value typed into a JSON MCP config as
+ * "\"123\"" or set with `$env:AVITO_ADS_ACCOUNT_ID = '"123"'` arrives with the
+ * quotes still attached, and the strict digit check below then rejects a
+ * perfectly correct account id. Telemetry showed one such install failing every
+ * spawn for two weeks — 931 dead starts, zero tool calls. Quotes are never part
+ * of a legitimate id, client id or secret, so removing them cannot mask a real
+ * mistake.
+ */
+function unquote(raw: string): string {
+  const trimmed = raw.trim();
+  const first = trimmed[0];
+  if ((first === '"' || first === "'") && trimmed.length > 1 && trimmed.at(-1) === first) {
+    return trimmed.slice(1, -1).trim();
+  }
+  return trimmed;
+}
+
 function die(message: string, reason: string): never {
   throw new ConfigError(message, reason);
 }
@@ -75,10 +95,10 @@ export function hasCredentials(config: AvitoAdsConfig): boolean {
  */
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AvitoAdsConfig {
   // An empty string reads as absent, never as an empty credential.
-  const clientId = env.AVITO_ADS_CLIENT_ID || undefined;
-  const clientSecret = env.AVITO_ADS_CLIENT_SECRET || undefined;
+  const clientId = unquote(env.AVITO_ADS_CLIENT_ID ?? "") || undefined;
+  const clientSecret = unquote(env.AVITO_ADS_CLIENT_SECRET ?? "") || undefined;
 
-  const accountRaw = (env.AVITO_ADS_ACCOUNT_ID ?? "").trim();
+  const accountRaw = unquote(env.AVITO_ADS_ACCOUNT_ID ?? "");
   let accountId: number | undefined;
   if (accountRaw) {
     // Strict digits: Number("12abc") is NaN but parseInt("12abc") is 12, and a
@@ -89,7 +109,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AvitoAdsConfig
     // is a client secret pasted into the wrong variable. Describing the shape is
     // just as actionable as quoting the value.
     const badAccountId =
-      "AVITO_ADS_ACCOUNT_ID должен быть положительным целым числом (только цифры, без пробелов, букв и знаков).";
+      "AVITO_ADS_ACCOUNT_ID должен быть положительным целым числом — только цифры, без пробелов, букв и знаков. " +
+      "Две частые причины: в переменную попал client secret вместо id рекламного аккаунта, " +
+      "либо значение склеилось с чем-то ещё при копировании. Id рекламного аккаунта виден в кабинете " +
+      "Авито Рекламы; окружающие кавычки сервер снимает сам, их наличие ошибкой не считается.";
     if (!/^\d+$/.test(accountRaw)) die(badAccountId, "invalid_account_id");
     accountId = Number(accountRaw);
     if (!Number.isSafeInteger(accountId) || accountId <= 0) die(badAccountId, "invalid_account_id");

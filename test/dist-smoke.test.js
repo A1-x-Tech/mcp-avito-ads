@@ -21,6 +21,8 @@ const ENTRYPOINT = fileURLToPath(new URL("../dist/index.js", import.meta.url));
 
 /** Every tool the assembled server must expose, with the annotations it ships. */
 const EXPECTED = {
+  // Diagnosis tool: the only one that works with a broken config.
+  auth_status: "READ_ONLY",
   // account.ts
   get_account: "READ_ONLY",
   get_balance: "READ_ONLY",

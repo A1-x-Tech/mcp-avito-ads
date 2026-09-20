@@ -5,6 +5,38 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.2.0] - 2026-09-21
+
+### Added
+
+- `auth_status` — a read-only diagnosis tool that answers "what exactly is wrong
+  with my setup?" from local state: which of `AVITO_ADS_CLIENT_ID`,
+  `AVITO_ADS_CLIENT_SECRET` and `AVITO_ADS_ACCOUNT_ID` are set, which value the
+  server rejected and why, the selected environment and the API base. It makes
+  no network call and never returns the client secret or a token. Until now a
+  broken install could only produce the same failure on every call, with no way
+  to tell which variable was at fault.
+
+### Fixed
+
+- Quoted values are accepted: one layer of matching quotes around
+  `AVITO_ADS_CLIENT_ID`, `AVITO_ADS_CLIENT_SECRET` and `AVITO_ADS_ACCOUNT_ID` is
+  stripped before validation. A JSON MCP config on Windows delivers the account
+  id as `"123"`, and the strict digit check rejected it — telemetry showed a
+  single install spawning the server 931 times in two weeks without one
+  successful call. Quotes are never part of a legitimate value, so accepting
+  them cannot mask a real mistake; a stray unmatched quote still fails.
+- The rejection message now names the two ways people actually get here: a
+  client secret pasted into the account-id variable, or a value glued to
+  something else while copying.
+
+### Changed
+
+- A malformed configuration no longer reports two telemetry events. The process
+  survives it, so only `unconfigured_start` (with the same reason code) is sent;
+  the extra `startup_failed` double-counted every such start and made a
+  survivable misconfiguration read as a dead server.
+
 ## [1.1.0] — 2026-08-19
 
 ### Changed

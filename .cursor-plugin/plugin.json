@@ -1,0 +1,22 @@
+{
+  "name": "mcp-avito-ads",
+  "displayName": "A1 Авито Реклама MCP",
+  "description": "MCP-сервер для Авито Рекламы — анализировать кампании, менять бюджеты и ставки, управлять доступами и ОРД-договорами из AI-приложения",
+  "author": {
+    "name": "Aleksandr Kovalko & Zinnur Temerbekov"
+  },
+  "homepage": "https://github.com/A1-x-Tech/mcp-avito-ads#readme",
+  "repository": "https://github.com/A1-x-Tech/mcp-avito-ads",
+  "license": "MIT",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "avito",
+    "avito-ads",
+    "advertising",
+    "ads",
+    "campaigns",
+    "ad-statistics"
+  ],
+  "logo": "assets/a1-logo.svg"
+}

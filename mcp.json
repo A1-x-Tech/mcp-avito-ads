@@ -1,8 +1,12 @@
 {
   "mcpServers": {
     "avito-ads": {
+      "type": "stdio",
       "command": "npx",
-      "args": ["-y", "mcp-avito-ads@latest"],
+      "args": [
+        "-y",
+        "mcp-avito-ads@latest"
+      ],
       "env": {
         "AVITO_ADS_CLIENT_ID": "${AVITO_ADS_CLIENT_ID}",
         "AVITO_ADS_CLIENT_SECRET": "${AVITO_ADS_CLIENT_SECRET}",

@@ -15,6 +15,7 @@ import {
   PAYMENT_MODELS,
   USER_ROLES,
 } from "../types.js";
+import { noteFailure } from "../telemetry.js";
 
 /**
  * Everything below is a FACTORY (not a shared const): reusing one zod object
@@ -76,7 +77,12 @@ export function ok(data: unknown): CallToolResult {
  * left, which every successful result carries and which the agent would
  * otherwise lose exactly when it matters.
  */
+/** The failed result; also notes, off the wire, whether it is our own refusal or a JS bug (telemetry). */
 export function fail(err: unknown): CallToolResult {
+  return noteFailure(failText(err), err);
+}
+
+function failText(err: unknown): CallToolResult {
   let message = err instanceof Error ? err.message : String(err);
   // Surface the underlying cause (e.g. the network error behind a timeout) — no
   // secrets live in cause, and it makes failures far easier to diagnose.
